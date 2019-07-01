@@ -5,7 +5,6 @@ from . import api, db, app
 def page_not_found(e):
     return "404", 404
 
-
 UPLOAD_FOLDER = app.config['UPLOAD_FOLDER']
 
 @app.route('/uploads/<path:filename>')

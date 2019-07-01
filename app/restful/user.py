@@ -1,12 +1,11 @@
 from flask_restplus import Resource, reqparse, fields
+from flask import g
 from .. import api, db
 from ..model import User
 from werkzeug.security import generate_password_hash
-import uuid
-from .auth import requires_auth
-from enum import Enum
+from .decorator import permission_required
 
-n_user = api.namespace('api/users', description='user operations')
+n_user = api.namespace('api/users', description='User Operations')
 
 m_user = api.model('user', {
     'id': fields.Integer(description="Unique identifier for the user."),
@@ -76,11 +75,11 @@ u_user.add_argument('avatar_url', location='args',
 class UsersApi(Resource):
     @api.marshal_with(m_user, envelope='users')
     @api.expect(g_user)
-    # @requires_auth
+    @permission_required()
     def get(self):
         args = g_user.parse_args()
         query = User.query
-
+        print(g.current_user)
         if args['role_id']:
             query = query.filter(User.role_id.in_(args['role_id']))
 
@@ -123,7 +122,6 @@ class UsersApi(Resource):
             hashed_password = generate_password_hash(
                 args['password'], method='sha256')
             new_user = User(
-                uuid=str(uuid.uuid4()),
                 login=args['login'],
                 name=args['login'],
                 password=hashed_password

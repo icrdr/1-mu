@@ -1,11 +1,13 @@
-from flask import Flask, send_from_directory
+from flask import Flask, current_app
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from flask_migrate import Migrate
+from flask_migrate import Migrate, init as db_init, migrate as db_migrate, upgrade as db_upgrade
+from config import config
+import os
 
 app = Flask(__name__)
-app.config.from_object('config')
+app.config.from_object(config[os.environ.get('FLASK_ENV')])
 
 # ODM
 db = SQLAlchemy(app)
@@ -19,3 +21,21 @@ api = Api(app, doc='/doc/', version='1.0', title='EMU(一目) API',
 CORS(app)
 
 from . import view, restful, model
+
+@app.cli.command()
+def update():
+    # migrate database to latest revision
+    db_migrate()
+    db_upgrade()
+
+    # update user roles
+    model.Role.insert_roles()
+
+@app.cli.command()
+def init():
+    # create tables
+    db.create_all()
+
+    # create user roles
+    model.Role.insert_roles()
+    db_init()
