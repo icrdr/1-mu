@@ -1,9 +1,10 @@
 from flask_restplus import Resource, reqparse, fields
 from flask import g
 from .. import api, db
-from ..model import User
+from ..model import User, PERMISSIONS
+
 from werkzeug.security import generate_password_hash
-from .decorator import permission_required
+from .decorator import permission_required, admin_required
 
 n_user = api.namespace('api/users', description='User Operations')
 
@@ -75,11 +76,9 @@ u_user.add_argument('avatar_url', location='args',
 class UsersApi(Resource):
     @api.marshal_with(m_user, envelope='users')
     @api.expect(g_user)
-    @permission_required()
     def get(self):
         args = g_user.parse_args()
         query = User.query
-        print(g.current_user)
         if args['role_id']:
             query = query.filter(User.role_id.in_(args['role_id']))
 
@@ -148,7 +147,6 @@ class UsersApi(Resource):
 @n_user.route('/<int:id>')
 class UserApi(Resource):
     @api.marshal_with(m_user)
-    # @requires_auth
     def get(self, id):
         user = User.query.get(id)
         if(user):
@@ -158,10 +156,12 @@ class UserApi(Resource):
 
     @api.marshal_with(m_user)
     @api.expect(u_user)
-    # @requires_auth
+    @permission_required()
     def put(self, id):
         args = u_user.parse_args()
         user = User.query.get(id)
+        if g.current_user.id != id:
+            api.abort(400, "you don't have permission")
         if user:
             if args['name']:
                 user.name = args['name']
@@ -178,7 +178,7 @@ class UserApi(Resource):
         else:
             api.abort(400, "login name already exist")
 
-    # @requires_auth
+    @admin_required
     def delete(self, id):
         user = User.query.get(id)
         if user:

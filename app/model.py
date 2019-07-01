@@ -1,6 +1,19 @@
-# from flask import current_app
-from . import db, app
+from . import db
 from datetime import datetime
+
+PERMISSIONS = {
+        'ADMIN': 1,
+        'WRITE': 2
+    }
+
+ROLE_PRESSENT = {
+    'ROLES' : {
+            'Visitor': [],
+            'Editor': [PERMISSIONS['WRITE']],
+            'Admin': [PERMISSIONS['WRITE'], PERMISSIONS['ADMIN']],
+        },
+    'DEFAULT':'Visitor'
+}
 
 user_follow = db.Table('user_follows',
     db.Column('user_id', db.Integer, db.ForeignKey('users.id')),
@@ -70,7 +83,7 @@ class User(db.Model):
         return self.role is not None and self.role.has_permission(perm)
 
     def is_admin(self):
-        return self.can(app.config['PERMISSIONS']['ADMIN'])
+        return self.can(PERMISSIONS['ADMIN'])
 
     def __repr__(self):
         return '<User %r>' % self.login
@@ -92,9 +105,8 @@ class Role(db.Model):
 
     @staticmethod
     def insert_roles():
-        role_pressent = app.config['ROLE_PRESSENT']
-        roles = role_pressent['ROLES']
-        default_role = role_pressent['DEFAULT']
+        roles = ROLE_PRESSENT['ROLES']
+        default_role = ROLE_PRESSENT['DEFAULT']
         old_default = Role.query.filter_by(default=True).first()
         if old_default:
             old_default.default = False
@@ -206,8 +218,8 @@ class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # one-many: File.uploader-User.files
     uploader_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    name = db.Column(db.String(40), unique=True)
-    format = db.Column(db.String(20), unique=True)
+    name = db.Column(db.String(40))
+    format = db.Column(db.String(20))
     url = db.Column(db.String(120), unique=True)
     upload_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 

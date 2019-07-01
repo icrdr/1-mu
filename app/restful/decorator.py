@@ -2,11 +2,9 @@ from flask_restplus import reqparse
 from functools import wraps
 from flask import g
 from .. import api, app
-from ..model import User
+from ..model import User, PERMISSIONS
 from werkzeug.security import check_password_hash
 import jwt, base64
-
-from . import PERMISSIONS, SECRET_KEY
 
 g_user = reqparse.RequestParser()
 g_user.add_argument('Authorization', required=True, location='headers',
@@ -17,7 +15,7 @@ def permission_required(permission=None):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             token = g_user.parse_args()['Authorization'].split(" ")[1]
-            data = jwt.decode(token, SECRET_KEY)
+            data = jwt.decode(token, app.config['SECRET_KEY'])
             user = User.query.get(data['id'])
             if user:
                 g.current_user = User.query.get(data['id'])
