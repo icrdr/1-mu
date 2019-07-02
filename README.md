@@ -42,8 +42,12 @@ location /api {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 }
   
-location /uploads {
-    alias /var/www/1-mu/uploads/;
+location /download {
+    alias /var/www/1-mu/download/;
+}
+
+location /upload {
+    alias /var/www/1-mu/upload/;
 }
 ```
 https://open.weixin.qq.com/connect/qrconnect?appid=wx9c88c3320f959b7c&redirect_uri=http%3A//www.1-mu.net&response_type=code&scope=snsapi_login&state=STATE#wechat_redirect
