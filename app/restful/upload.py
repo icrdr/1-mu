@@ -30,8 +30,8 @@ g_file = reqparse.RequestParser()
 g_file.add_argument('user_id', location='args', action='split',
                     help="Limit result set to users matching at least one specific \
                     role provided. Accepts list or single role.")
-g_file.add_argument('format', location='args', default='png',
-                    choices=['png', 'jpg'],
+g_file.add_argument('format', location='args',
+                    choices=['png', 'jpg', 'jpeg', 'txt', 'pdf', 'gif'],
                     help="Order sort attribute ascending or descending.")
 g_file.add_argument('include', location='args', action='split',
                     help="Limit result set to specific IDs.")

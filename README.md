@@ -27,9 +27,22 @@ environment=FLASK_APP=app,FLASK_ENV=production,SECRET_KEY=,DATABASE_URL
 stdout_logfile=/var/log/supervisor/gunicorn_supervisor.log
 stderr_logfile=/var/log/supervisor/gunicorn_supervisor_err.log
 ```
+
 To enable the configuration, run the following commands:
 ```
 $ sudo supervisorctl reread
 $ sudo service supervisor restart
 ```
-
+### nginx
+```
+location /api {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+}
+  
+location /uploads {
+    alias /var/www/1-mu/uploads/;
+}
+```
