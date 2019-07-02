@@ -1,16 +1,19 @@
-from . import db
+from . import db, app
 from datetime import datetime
+import os
 
 PERMISSIONS = {
         'ADMIN': 1,
-        'WRITE': 2
+        'WRITE': 2,
+        'EDIT': 4,
+        'UPLOAD': 8
     }
 
 ROLE_PRESSENT = {
     'ROLES' : {
-            'Visitor': [],
-            'Editor': [PERMISSIONS['WRITE']],
-            'Admin': [PERMISSIONS['WRITE'], PERMISSIONS['ADMIN']],
+            'Visitor': [PERMISSIONS['WRITE'], PERMISSIONS['UPLOAD']],
+            'Editor': [PERMISSIONS['WRITE'], PERMISSIONS['UPLOAD'], PERMISSIONS['EDIT']],
+            'Admin': [PERMISSIONS['WRITE'], PERMISSIONS['EDIT'], PERMISSIONS['UPLOAD'],PERMISSIONS['ADMIN']],
         },
     'DEFAULT':'Visitor'
 }
@@ -23,6 +26,11 @@ user_follow = db.Table('user_follows',
 post_tag = db.Table('post_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tags.id')),
     db.Column('post_id', db.Integer, db.ForeignKey('posts.id'))
+)
+
+post_file = db.Table('post_file',
+    db.Column('file_id', db.Integer, db.ForeignKey('files.id')),
+    db.Column('post_id', db.Integer, db.ForeignKey('posts.id')),
 )
 
 post_like = db.Table('post_likes',
@@ -159,6 +167,8 @@ class Post(db.Model):
     comments = db.relationship('Comment', backref=db.backref('parent_post', lazy=True))
     # many-many: Tag.posts-Post.tags
     tags = db.relationship('Tag', secondary=post_tag, lazy='subquery', backref=db.backref('posts', lazy=True))
+    # many-many: File.posts-Post.files
+    files = db.relationship('File', secondary=post_file, lazy='subquery', backref=db.backref('posts', lazy=True))
     # many-many: User.like_posts-Post.like_users
     like_users = db.relationship('User', secondary=post_like, lazy='subquery', backref=db.backref('like_posts', lazy=True))
     # many-many: User.save_posts-Post.save_users
@@ -224,6 +234,14 @@ class File(db.Model):
     upload_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
     description = db.Column(db.String(120))
+
+    @staticmethod
+    def clear_missing_file():
+        files_list = File.query.all()
+        for file in files_list:
+            if not os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], file.url)):
+                db.session.delete(file)
+        db.session.commit()
 
     def __repr__(self):
         return '<File %r>' % self.name

@@ -14,7 +14,7 @@ m_user = api.model('user', {
     'title': fields.String(description="The title for the user."),
     'email': fields.String(description="The email address for the user."),
     'phone': fields.String(description="The phone number for the user."),
-    'avatar_url': fields.String(description="The avatar url for the user."),
+    'avatar_url': fields.Url(description="The avatar url for the user."),
     'reg_date': fields.String(description="Registration date for the user."),
     'role': fields.String(
         attribute=lambda x: str(x.role.name),
@@ -31,7 +31,7 @@ m_user = api.model('user', {
 })
 
 g_user = reqparse.RequestParser()
-g_user.add_argument('role_id', location='args', type=int,
+g_user.add_argument('role_id', location='args', action='split',
                     help="Limit result set to users matching at least one specific \
                     role provided. Accepts list or single role.")
 g_user.add_argument('include', location='args', action='split',

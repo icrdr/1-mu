@@ -1,4 +1,4 @@
-from flask import Flask, current_app
+from flask import Flask
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -14,8 +14,7 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
 # restful
-api = Api(app, doc='/doc/', version='1.0', title='EMU(一目) API',
-    description='')
+api = Api(app, doc='/doc/', version='1.0', title='EMU(一目) API', description='')
 
 # support CORS https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 CORS(app)
@@ -30,6 +29,8 @@ def update():
 
     # update user roles
     model.Role.insert_roles()
+    model.File.clear_missing_file()
+
 
 @app.cli.command()
 def init():

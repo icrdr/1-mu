@@ -1,18 +1,13 @@
 from flask_restplus import Resource, reqparse, fields
-from flask import g
+from flask import g, request
 from .. import api, db, app
 from ..model import File, PERMISSIONS
 
 from werkzeug import utils, datastructures
+from .decorator import permission_required, admin_required
 from datetime import datetime
 import os, shortuuid
-
-
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower(
-           ) in app.config['ALLOWED_EXTENSIONS']
-
+from . import buildUrl
 
 ns_file = api.namespace('api/files', description='upload operations')
 
@@ -22,17 +17,17 @@ m_user = api.model('user', {
     'avatar_url': fields.String(description="The avatar url for the user."),
 })
 
-m_file = api.model('user', {
+m_file = api.model('file', {
     'id': fields.Integer(description="Unique identifier for the user."),
     'name': fields.String(description="Display name for the user."),
     'description': fields.String(description="The title for the user."),
-    'url': fields.String(description="The avatar url for the user."),
+    'url': fields.String(attribute=lambda x: buildUrl(x.url), description="The avatar url for the user."),
     'format': fields.String(description="Registration date for the user."),
     'uploader': fields.Nested(m_user)
 })
 
 g_file = reqparse.RequestParser()
-g_file.add_argument('user_id', location='args', type=int,
+g_file.add_argument('user_id', location='args', action='split',
                     help="Limit result set to users matching at least one specific \
                     role provided. Accepts list or single role.")
 g_file.add_argument('format', location='args', default='png',
@@ -59,7 +54,7 @@ p_file.add_argument('file', type=datastructures.FileStorage, location='files')
 
 @ns_file.route('/')
 class UploadApi(Resource):
-    @api.marshal_with(m_file, envelope='users')
+    @api.marshal_with(m_file, envelope='files')
     @api.expect(g_file)
     def get(self):
         args = g_file.parse_args()
@@ -103,6 +98,7 @@ class UploadApi(Resource):
 
     @api.marshal_with(m_file)
     @api.expect(p_file)
+    @permission_required(PERMISSIONS['UPLOAD'])
     def post(self):
         args = p_file.parse_args()
         file = args['file']
@@ -119,14 +115,13 @@ class UploadApi(Resource):
             filename = str(shortuuid.uuid())+'.'+ format
             path = os.path.join(app.config['UPLOAD_FOLDER'], year, month, day)
 
-            folder = os.path.exists(path)
-            if not folder:
+            if not os.path.exists(path):
                 os.makedirs(path)
 
             file.save(os.path.join(path, filename))
 
             new_file = File(
-                uploader_user_id = 1,
+                uploader_user_id = g.current_user.id,
                 name = rawname,
                 format = format,
                 url = str(os.path.join(year, month, day , filename)).replace('\\', '/')
@@ -137,3 +132,8 @@ class UploadApi(Resource):
             return new_file
         else:
             api.abort(400, "upload failure!")
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower(
+           ) in app.config['ALLOWED_EXTENSIONS']

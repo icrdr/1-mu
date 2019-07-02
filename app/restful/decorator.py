@@ -15,7 +15,11 @@ def permission_required(permission=None):
         @wraps(f)
         def decorated_function(*args, **kwargs):
             token = g_user.parse_args()['Authorization'].split(" ")[1]
-            data = jwt.decode(token, app.config['SECRET_KEY'])
+            try:
+                data = jwt.decode(token, app.config['SECRET_KEY'])
+            except:
+                return api.abort(400, "bad token")
+
             user = User.query.get(data['id'])
             if user:
                 g.current_user = User.query.get(data['id'])
