@@ -9,7 +9,7 @@ from datetime import datetime
 import os, shortuuid, zipfile
 from . import buildUrl
 
-n_download = api.namespace('api/download', description='upload operations')
+n_download = api.namespace('api/downloads', description='upload operations')
 
 m_file = api.model('file', {
     'id': fields.Integer(description="Unique identifier for the user."),
