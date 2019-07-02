@@ -72,7 +72,7 @@ u_user.add_argument('avatar_url', location='args',
                     help="The avatar url for the user.")
 
 
-@n_user.route('/')
+@n_user.route('')
 class UsersApi(Resource):
     @api.marshal_with(m_user, envelope='users')
     @api.expect(g_user)

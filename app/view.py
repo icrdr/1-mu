@@ -5,6 +5,10 @@ from . import db, app
 def page_not_found(e):
     return "404", 404
 
-@app.route('/uploads/<path:filename>')
+@app.route('/upload/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory('../'+ app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/download/<path:filename>')
+def downlod_file(filename):
+    return send_from_directory('../'+ app.config['DOWNLOAD_FOLDER'], filename, as_attachment=True)

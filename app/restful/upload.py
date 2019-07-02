@@ -1,7 +1,7 @@
 from flask_restplus import Resource, reqparse, fields
 from flask import g, request
 from .. import api, db, app
-from ..model import File, PERMISSIONS
+from ..model import File, PERMISSIONS, Stage
 
 from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
@@ -49,10 +49,12 @@ g_file.add_argument('pre_page', location='args', type=int, default=10,
                     help="Maximum number of items to be returned in result set.")
 
 p_file = reqparse.RequestParser()
-p_file.add_argument('file', type=datastructures.FileStorage, location='files')
+p_file.add_argument('stage_id', location='args', type=int,
+                    help="Maximum number of items to be returned in result set.")
+p_file.add_argument('file', required=True, type=datastructures.FileStorage, location='files')
 
 
-@ns_file.route('/')
+@ns_file.route('')
 class UploadApi(Resource):
     @api.marshal_with(m_file, envelope='files')
     @api.expect(g_file)
@@ -101,37 +103,44 @@ class UploadApi(Resource):
     @permission_required(PERMISSIONS['UPLOAD'])
     def post(self):
         args = p_file.parse_args()
+        stage = None
+        if args['stage_id']:
+            stage = Stage.query.get(args['stage_id'])
+
         file = args['file']
+        if allowed_file(file.filename):
+            try:
+                # filename = utils.secure_filename(file.filename)
+                format = file.filename.split(".")[-1]
+                rawname = file.filename[:-len(format)-1]
 
-        if file and allowed_file(file.filename):
-            filename = utils.secure_filename(file.filename)
-            format = filename.split(".")[-1]
-            rawname = filename[:-len(format)-1]
+                date = datetime.utcnow().strftime("%Y%m%d")
+                year = date[:4]
+                month = date[4:6]
+                day = date[6:8]
+                filename = str(shortuuid.uuid())+'.'+ format
+                path = os.path.join(app.config['UPLOAD_FOLDER'], year, month, day)
 
-            date = datetime.utcnow().strftime("%Y%m%d")
-            year = date[:4]
-            month = date[4:6]
-            day = date[6:8]
-            filename = str(shortuuid.uuid())+'.'+ format
-            path = os.path.join(app.config['UPLOAD_FOLDER'], year, month, day)
+                if not os.path.exists(path):
+                    os.makedirs(path)
 
-            if not os.path.exists(path):
-                os.makedirs(path)
-
-            file.save(os.path.join(path, filename))
-
-            new_file = File(
-                uploader_user_id = g.current_user.id,
-                name = rawname,
-                format = format,
-                url = str(os.path.join(year, month, day , filename)).replace('\\', '/')
-            )
-            db.session.add(new_file)
-            db.session.commit()
-
-            return new_file
+                file.save(os.path.join(path, filename))
+                
+                new_file = File(
+                    uploader_user_id = g.current_user.id,
+                    name = rawname,
+                    format = format,
+                    url = str(os.path.join(year, month, day , filename)).replace('\\', '/')
+                )
+                
+                if stage:new_file.stages.append(stage)
+                db.session.add(new_file)
+                db.session.commit()
+                return new_file
+            except:
+                api.abort(400, "upload failure!")
         else:
-            api.abort(400, "upload failure!")
+            api.abort(400, "file format not allowed!")
 
 def allowed_file(filename):
     return '.' in filename and \

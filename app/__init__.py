@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, json
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
@@ -7,7 +7,7 @@ from config import config
 import os
 
 app = Flask(__name__)
-app.config.from_object(config[os.environ.get('FLASK_ENV')])
+app.config.from_object(config[os.environ.get('FLASK_ENV') or 'development'])
 
 # ODM
 db = SQLAlchemy(app)
@@ -40,3 +40,14 @@ def init():
     # create user roles
     model.Role.insert_roles()
     db_init()
+
+@app.cli.command()
+def doc():
+    with app.app_context(), app.test_request_context():
+        urlvars = False  # Build query strings in URLs
+        swagger = True  # Export Swagger specifications
+        data = api.as_postman(urlvars=urlvars, swagger=swagger)
+        with open("api.json",'w') as file: # Use file to refer to the file object
+            print(json.dumps(data))
+            file.write(json.dumps(data))
+        
