@@ -18,7 +18,6 @@ def permission_required(permission=None):
         def decorated_function(*args, **kwargs):
             # token = g_user.parse_args()['Authorization'].split(" ")[1]
             args = g_user.parse_args()
-            # print(args)
             if args['token']:
                 try:
                     data = jwt.decode(args['token'], app.config['SECRET_KEY'])

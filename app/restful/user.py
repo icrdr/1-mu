@@ -6,7 +6,7 @@ from ..model import User, PERMISSIONS
 from werkzeug.security import generate_password_hash
 from .decorator import permission_required, admin_required
 
-n_user = api.namespace('api/users', description='User Operations')
+n_user = api.namespace('api/user', description='User Operations')
 
 m_user = api.model('user', {
     'id': fields.Integer(description="Unique identifier for the user."),
@@ -148,6 +148,7 @@ class UsersApi(Resource):
 @n_user.route('/<int:id>')
 class UserApi(Resource):
     @api.marshal_with(m_user)
+    @permission_required()
     def get(self, id):
         user = User.query.get(id)
         if(user):

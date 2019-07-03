@@ -7,4 +7,4 @@ def buildUrl(path, dir=app.config['UPLOAD_FOLDER']):
     url_parts[2] += dir + path
     return urlunparse(url_parts).replace('\\', '/')
 
-from . import user, post, auth, upload, download, project
+from . import user, post, auth, file, download, project

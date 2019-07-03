@@ -84,7 +84,7 @@ class AuthApi(Resource):
                                 wx_user = new_wx_user
                             db.session.commit()
                             token = jwt.encode({'id': wx_user.bind_user_id, 'exp': datetime.utcnow(
-                            )+timedelta(seconds = 10)}, app.config['SECRET_KEY'])
+                            )+timedelta(hours = 24)}, app.config['SECRET_KEY'])
                             return {
                                 'token': token.decode('UTF-8'),
                                 'wx_info': json

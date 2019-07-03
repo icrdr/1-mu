@@ -9,7 +9,7 @@ from datetime import datetime
 import os, shortuuid
 from . import buildUrl
 
-ns_file = api.namespace('api/files', description='upload operations')
+ns_file = api.namespace('api/file', description='upload operations')
 
 m_user = api.model('user', {
     'id': fields.Integer,
@@ -23,7 +23,8 @@ m_file = api.model('file', {
     'description': fields.String(description="The title for the user."),
     'url': fields.String(attribute=lambda x: buildUrl(x.url), description="The avatar url for the user."),
     'format': fields.String(description="Registration date for the user."),
-    'uploader': fields.Nested(m_user)
+    'uploader': fields.Nested(m_user),
+    'upload_date': fields.String(description="Registration date for the user.")
 })
 
 g_file = reqparse.RequestParser()
@@ -58,6 +59,7 @@ p_file.add_argument('file', required=True, type=datastructures.FileStorage, loca
 class UploadApi(Resource):
     @api.marshal_with(m_file, envelope='files')
     @api.expect(g_file)
+    @permission_required()
     def get(self):
         args = g_file.parse_args()
         query = File.query

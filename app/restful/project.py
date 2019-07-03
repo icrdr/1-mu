@@ -4,7 +4,7 @@ from ..model import Project, Stage
 from . import buildUrl
 from datetime import datetime
 
-n_porject = api.namespace('api/projects', description='projects operations')
+n_porject = api.namespace('api/project', description='projects operations')
 
 m_file = api.model('file', {
     'id': fields.Integer(description="Unique identifier for the user."),
