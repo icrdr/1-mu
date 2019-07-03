@@ -27,6 +27,11 @@ class Config:
     WECHAT_APPID = 'wx9c88c3320f959b7c'
 
     WECHAT_APPSECRET = 'e79669c7d74a548e0a95aa2bf4952913'
+
+    # CORS_HEADER = 'Content-Type, auth'
+    CORS_RESOURCES = {r"/*":{"origins":"http://localhost:3000"}}
+    CORS_METHODS = "GET,POST,OPTIONS"
+    CORS_SUPPORTS_CREDENTIALS = True
     
 class DevelopmentConfig(Config):
     pass

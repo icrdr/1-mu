@@ -1,4 +1,4 @@
-from flask import send_from_directory
+from flask import send_from_directory, make_response
 from . import db, app
 
 @app.errorhandler(404)

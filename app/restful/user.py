@@ -1,5 +1,5 @@
 from flask_restplus import Resource, reqparse, fields
-from flask import g
+from flask import g, request
 from .. import api, db
 from ..model import User, PERMISSIONS
 
@@ -76,6 +76,7 @@ u_user.add_argument('avatar_url', location='args',
 class UsersApi(Resource):
     @api.marshal_with(m_user, envelope='users')
     @api.expect(g_user)
+    @permission_required()
     def get(self):
         args = g_user.parse_args()
         query = User.query
