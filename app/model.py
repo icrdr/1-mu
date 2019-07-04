@@ -293,7 +293,8 @@ class File(db.Model):
     format = db.Column(db.String(16))
     url = db.Column(db.String(256), unique=True)
     upload_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
-
+    # one-many: Preview.file-File.previews
+    previews = db.relationship('Preview', backref=db.backref('file', lazy=True))
     description = db.Column(db.String(256))
 
     @staticmethod
@@ -301,11 +302,22 @@ class File(db.Model):
         files_list = File.query.all()
         for file in files_list:
             if not os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], file.url)):
+                for preview in file.previews:
+                    db.session.delete(preview)
                 db.session.delete(file)
         db.session.commit()
 
     def __repr__(self):
         return '<File %r>' % self.name
+
+class Preview(db.Model):
+    __tablename__ = 'previews'
+    id = db.Column(db.Integer, primary_key=True)
+    # one-many: Preview.file-File.previews
+    bind_file_id = db.Column(db.Integer, db.ForeignKey('files.id'))
+    url = db.Column(db.String(256), unique=True)
+    def __repr__(self):
+        return '<Preview %r>' % self.nickname
 
 class WxUser(db.Model):
     __tablename__ = 'wx_users'
@@ -323,3 +335,4 @@ class WxUser(db.Model):
     reg_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     def __repr__(self):
         return '<WxUser %r>' % self.nickname
+

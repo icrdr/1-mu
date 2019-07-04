@@ -13,7 +13,7 @@ class Config:
     # about upload
     UPLOAD_FOLDER = 'upload/'
     DOWNLOAD_FOLDER = 'download/'
-    ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'])
+    ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif','psd'])
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024
 
     # RequestParser error https://flask-restplus.readthedocs.io/en/stable/parsing.html

@@ -1,13 +1,15 @@
 from flask_restplus import Resource, reqparse, fields
 from flask import g, request
 from .. import api, db, app
-from ..model import File, PERMISSIONS, Stage
+from ..model import File, PERMISSIONS, Stage, Preview
 
 from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
 from datetime import datetime
 import os, shortuuid
 from . import buildUrl
+from psd_tools import PSDImage
+from PIL import Image
 
 ns_file = api.namespace('api/file', description='upload operations')
 
@@ -15,6 +17,9 @@ m_user = api.model('user', {
     'id': fields.Integer,
     'name': fields.String,
     'avatar_url': fields.String(description="The avatar url for the user."),
+})
+m_preview = api.model('preview', {
+    'url': fields.String(attribute=lambda x: buildUrl(x.url), description="The avatar url for the user."),
 })
 
 m_file = api.model('file', {
@@ -24,6 +29,7 @@ m_file = api.model('file', {
     'url': fields.String(attribute=lambda x: buildUrl(x.url), description="The avatar url for the user."),
     'format': fields.String(description="Registration date for the user."),
     'uploader': fields.Nested(m_user),
+    'previews': fields.Nested(m_preview),
     'upload_date': fields.String(description="Registration date for the user.")
 })
 
@@ -111,36 +117,60 @@ class UploadApi(Resource):
 
         file = args['file']
         if allowed_file(file.filename):
-            try:
+            # try:
                 # filename = utils.secure_filename(file.filename)
-                format = file.filename.split(".")[-1]
-                rawname = file.filename[:-len(format)-1]
+            format = file.filename.split(".")[-1]
+            rawname = file.filename[:-len(format)-1]
 
-                date = datetime.utcnow().strftime("%Y%m%d")
-                year = date[:4]
-                month = date[4:6]
-                day = date[6:8]
-                filename = str(shortuuid.uuid())+'.'+ format
-                path = os.path.join(app.config['UPLOAD_FOLDER'], year, month, day)
+            date = datetime.utcnow().strftime("%Y%m%d")
+            year = date[:4]
+            month = date[4:6]
+            day = date[6:8]
+            random_name = str(shortuuid.uuid())
+            filename = random_name +'.'+ format
+            path = os.path.join(app.config['UPLOAD_FOLDER'], year, month, day)
 
-                if not os.path.exists(path):
-                    os.makedirs(path)
+            if not os.path.exists(path):
+                os.makedirs(path)
 
-                file.save(os.path.join(path, filename))
-                
-                new_file = File(
-                    uploader_user_id = g.current_user.id,
-                    name = rawname,
-                    format = format,
-                    url = str(os.path.join(year, month, day , filename)).replace('\\', '/')
+            file.save(os.path.join(path, filename))
+            
+            new_file = File(
+                uploader_user_id = g.current_user.id,
+                name = rawname,
+                format = format,
+                url = str(os.path.join(year, month, day , filename)).replace('\\', '/')
+            )
+            
+            if stage:new_file.stages.append(stage)
+
+            db.session.add(new_file)
+            db.session.commit()
+
+            if format=='psd':
+                psd = PSDImage.open(os.path.join(path, filename))
+                psd.compose().save(os.path.join(path, random_name+'.png'))
+
+            if format in ['png','jpg','psd']:
+                im_path = ''
+                if format=='psd':
+                    im_path = os.path.join(path, filename)
+                else:
+                    im_path = os.path.join(path, random_name+'.png')
+                im = Image.open(im_path)
+                im.thumbnail((128,128))
+                im.save(os.path.join(path, random_name) + "_thumbnail.png", "PNG")
+
+                new_preview = Preview(
+                    bind_file_id = new_file.id,
+                    url = str(os.path.join(year, month, day , random_name+"_thumbnail.png")).replace('\\', '/')
                 )
-                
-                if stage:new_file.stages.append(stage)
-                db.session.add(new_file)
+                db.session.add(new_preview)
                 db.session.commit()
-                return new_file
-            except:
-                api.abort(400, "upload failure!")
+
+            return new_file
+            # except:
+            #     api.abort(400, "upload failure!")
         else:
             api.abort(400, "file format not allowed!")
 
