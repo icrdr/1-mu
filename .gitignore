@@ -119,3 +119,4 @@ migrations/
 pylintrc
 .vscode/
 api.json
+config.py
