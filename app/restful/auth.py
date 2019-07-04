@@ -49,7 +49,7 @@ class AuthApi(Resource):
                         json = r.json()
                         if 'openid' in json:
                             wx_user = WxUser.query.filter_by(
-                                nickname=json['uuionid']).first()
+                                uuionid=json['uuionid']).first()
                             if wx_user:
                                 wx_user.openid = json['openid'],
                                 wx_user.nickname = json['nickname'],
@@ -88,7 +88,7 @@ class AuthApi(Resource):
                             return {
                                 'token': token.decode('UTF-8'),
                                 'wx_info': json
-                            }, 200, {'Set-Cookie': 'name=Nicholas'}
+                            }, 200
                         else:
                             return json, 400
                     except:
