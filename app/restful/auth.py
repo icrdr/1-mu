@@ -49,7 +49,7 @@ class AuthApi(Resource):
                         json = r.json()
                         if 'openid' in json:
                             wx_user = WxUser.query.filter_by(
-                                uuionid=json['uuionid']).first()
+                                unionid=json['unionid']).first()
                             if wx_user:
                                 wx_user.openid = json['openid'],
                                 wx_user.nickname = json['nickname'],
