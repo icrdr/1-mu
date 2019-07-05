@@ -69,7 +69,7 @@ class User(db.Model):
     name = db.Column(db.String(64))
     title = db.Column(db.String(128))
     about_me = db.Column(db.Text())
-    avatar_url = db.Column(db.String(256))
+    avatar_url = db.Column(db.String(512))
     reg_date = db.Column(db.DateTime, default=datetime.utcnow)
     # one-many: User.role-Role.users
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
@@ -111,7 +111,7 @@ class Role(db.Model):
     __tablename__ = 'roles'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
-    description = db.Column(db.String(256))
+    description = db.Column(db.String(512))
     default = db.Column(db.Boolean, default=False, index=True)
     permissions = db.Column(db.Integer)
     # one-many: role-Role.users
@@ -163,7 +163,7 @@ class Group(db.Model):
     __tablename__ = 'groups'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
-    description = db.Column(db.String(256))
+    description = db.Column(db.String(512))
 
     def __repr__(self):
         return '<Group %r>' % self.name
@@ -171,7 +171,7 @@ class Group(db.Model):
 class Post(db.Model):
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(128))
+    title = db.Column(db.String(256))
     content = db.Column(db.Text)
     # one-many: Post.author-User.posts
     author_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
@@ -182,9 +182,9 @@ class Post(db.Model):
     status = db.Column(db.Enum('publish','draft','discard'), server_default=("draft"))
     public_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
-    cover_img_url = db.Column(db.String(256))
+    cover_img_url = db.Column(db.String(512))
 
-    excerpt = db.Column(db.String(256))
+    excerpt = db.Column(db.String(512))
     # one-many: Comment.parent_post-Post.comments
     comments = db.relationship('Comment', backref=db.backref('parent_post', lazy=True))
     # many-many: Tag.posts-Post.tags
@@ -203,7 +203,7 @@ class Tag(db.Model):
     __tablename__ = 'tags'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
-    description = db.Column(db.String(256))
+    description = db.Column(db.String(512))
 
     def __repr__(self):
         return '<Tag %r>' % self.name
@@ -212,7 +212,7 @@ class Category(db.Model):
     __tablename__ = 'categories'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
-    description = db.Column(db.String(256))
+    description = db.Column(db.String(512))
 
     # one-many: Post.category-Category.posts
     posts = db.relationship('Post', backref=db.backref('category', lazy=True))
@@ -291,11 +291,11 @@ class File(db.Model):
     uploader_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     name = db.Column(db.String(64))
     format = db.Column(db.String(16))
-    url = db.Column(db.String(256), unique=True)
+    url = db.Column(db.String(512), unique=True)
     upload_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     # one-many: Preview.file-File.previews
     previews = db.relationship('Preview', backref=db.backref('file', lazy=True))
-    description = db.Column(db.String(256))
+    description = db.Column(db.String(512))
 
     @staticmethod
     def clear_missing_file():
@@ -315,7 +315,8 @@ class Preview(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # one-many: Preview.file-File.previews
     bind_file_id = db.Column(db.Integer, db.ForeignKey('files.id'))
-    url = db.Column(db.String(256), unique=True)
+    url = db.Column(db.String(512), unique=True)
+    size = db.Column(db.Integer)
     def __repr__(self):
         return '<Preview %r>' % self.nickname
 
@@ -326,11 +327,11 @@ class WxUser(db.Model):
     openid = db.Column(db.String(128))
     nickname = db.Column(db.String(64))
     sex = db.Column(db.Integer)
-    language = db.Column(db.String(16))
-    city = db.Column(db.String(32))
-    province = db.Column(db.String(32))
-    country = db.Column(db.String(32))
-    headimg_url = db.Column(db.String(256))
+    language = db.Column(db.String(32))
+    city = db.Column(db.String(64))
+    province = db.Column(db.String(64))
+    country = db.Column(db.String(64))
+    headimg_url = db.Column(db.String(512))
     unionid = db.Column(db.String(128))
     reg_date = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     def __repr__(self):

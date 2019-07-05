@@ -1,6 +1,8 @@
 import os
+
+
 class Config:
-    DOMAIN_URL='http://localhost:5000'
+    DOMAIN_URL = 'http://localhost:5000'
 
     SECRET_KEY = os.environ.get('SECRET_KEY')
     # link to mysql
@@ -15,9 +17,11 @@ class Config:
     # about upload
     UPLOAD_FOLDER = 'upload/'
     DOWNLOAD_FOLDER = 'download/'
-    ALLOWED_EXTENSIONS = set(['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif','psd'])
+    ALLOWED_EXTENSIONS = set(
+        ['txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'psd', 'bmp','tif', 'tiff', 'tga', 'sai2'])
     MAX_CONTENT_LENGTH = 10 * 1024 * 1024
-
+    THUMBNAIL_SIZE=[1024, 512, 256]
+    
     # RequestParser error https://flask-restplus.readthedocs.io/en/stable/parsing.html
     BUNDLE_ERRORS = True
     # disable fields mask https://flask-restplus.readthedocs.io/en/stable/mask.html
@@ -33,18 +37,22 @@ class Config:
     WX_KF_APPSECRET = 'e79669c7d74a548e0a95aa2bf4952913'
 
     # CORS_HEADER = 'Content-Type, auth'
-    CORS_RESOURCES = {r"/*":{"origins":"http://localhost:3000"}}
+    CORS_RESOURCES = {r"/*": {"origins": "http://localhost:3000"}}
     CORS_METHODS = "GET,POST,OPTIONS"
     CORS_SUPPORTS_CREDENTIALS = True
-    
+
+
 class DevelopmentConfig(Config):
     pass
+
 
 class TestingConfig(Config):
     pass
 
+
 class ProductionConfig(Config):
     pass
+
 
 config = {
     'development': DevelopmentConfig,

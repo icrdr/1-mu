@@ -35,7 +35,7 @@ $ sudo service supervisor restart
 ```
 or
 `gunicorn -w 2 -b 0:8000 app:app`
-
+`sudo fuser -k 8000/tcp`
 ### nginx
 ```
 location /api {

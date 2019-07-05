@@ -20,7 +20,7 @@ class AuthApi(Resource):
     @api.expect(g_user)
     def get(self):
         args = g_user.parse_args()
-        if args['Authorization']:
+        if args['Authorization']: # basic auth
             auth_data = args['Authorization'].split(" ")[1]
             auth = base64.b64decode(auth_data).decode('utf-8').split(":")
             user = User.query.filter_by(login=auth[0]).first()
@@ -33,8 +33,8 @@ class AuthApi(Resource):
                     return api.abort(400, "wrong password")
             else:
                 return api.abort(400, "user not exist")
-        elif args['wxcode']:
-            url = ''
+        elif args['wxcode']: # wx auth
+            url = '' # step 1: get access code from client.
             if args['wxtype'] == 'gz':
                 url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code" % \
                     (app.config['WX_GZ_APPID'],
@@ -43,22 +43,21 @@ class AuthApi(Resource):
                 url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code" % \
                     (app.config['WX_KF_APPID'],
                     app.config['WX_KF_APPSECRET'], args['wxcode'])
-            print(url)
-            print(args['wxtype'])
-            try:
+            try: # step 2: get access_token from wechat serves.
                 r = requests.get(url)
                 json = r.json()
                 if 'access_token' in json:
                     url = "https://api.weixin.qq.com/sns/userinfo?access_token=%s&openid=%s" % \
                         (json['access_token'], json['openid'])
-                    try:
+                    try: # step 3: get userinfo with access_token from wechat serves.
                         r = requests.get(url)
                         r.encoding = 'utf-8'
                         json = r.json()
                         if 'openid' in json:
                             wx_user = WxUser.query.filter_by(
                                 unionid=json['unionid']).first()
-                            if wx_user:
+                            # check if the wechat unionid is already registed on our serves
+                            if wx_user: # if so, update his info
                                 wx_user.openid = json['openid'],
                                 wx_user.nickname = json['nickname'],
                                 wx_user.sex = json['sex'],
@@ -68,7 +67,7 @@ class AuthApi(Resource):
                                 wx_user.country = json['country'],
                                 wx_user.headimg_url = json['headimgurl'],
                                 wx_user.unionid = json['unionid']
-                            else:
+                            else: # otherwise, create a new one
                                 new_wx_user = WxUser(
                                     openid=json['openid'],
                                     nickname=json['nickname'],
@@ -81,6 +80,8 @@ class AuthApi(Resource):
                                     unionid=json['unionid']
                                 )
                                 db.session.add(new_wx_user)
+
+                                # create a new account on our serves and bind it to the wechat account.
                                 new_user = User(
                                     login=str(shortuuid.uuid()),
                                     name=json['nickname'],
@@ -90,7 +91,9 @@ class AuthApi(Resource):
                                 )
                                 db.session.add(new_user)
                                 wx_user = new_wx_user
+
                             db.session.commit()
+                            # generate a jwt based on user id
                             token = jwt.encode({'id': wx_user.bind_user_id, 'exp': datetime.utcnow(
                             )+timedelta(hours = 24)}, app.config['SECRET_KEY'])
                             return {

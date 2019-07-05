@@ -155,19 +155,24 @@ class UploadApi(Resource):
                 db.session.add(new_file)
                 db.session.commit()
 
-                
-                if format in ['png','jpg','psd','jpeg','gif']:
-                    im_path = os.path.join(path, filename)
-                    im = Image.open(im_path)
-                    im.thumbnail((128,128))
-                    im.save(os.path.join(path, random_name) + "_thumbnail.png", "PNG")
+                try:
+                    if format in ['png','jpg','psd','jpeg','gif','bmp','tga','tiff','tif']:
+                        im_path = os.path.join(path, filename)
+                        im = Image.open(im_path)
+                        for size in app.config['THUMBNAIL_SIZE']:
+                            im.thumbnail((size, size))
+                            im.save(os.path.join(path, random_name) + "_%s.jpg"%str(size), "JPEG")
 
-                    new_preview = Preview(
-                        bind_file_id = new_file.id,
-                        url = str(os.path.join(year, month, day , random_name+"_thumbnail.png")).replace('\\', '/')
-                    )
-                    db.session.add(new_preview)
-                    db.session.commit()
+                            new_preview = Preview(
+                                bind_file_id = new_file.id,
+                                url = str(os.path.join(year, month, day , random_name+"_%s.jpg"%str(size))).replace('\\', '/'),
+                                size = size
+                            )
+                            db.session.add(new_preview)
+                        db.session.commit()
+                except Exception as e:
+                    print(e)
+                    api.abort(400, "fail to gererate thumbnail!")
 
                 return new_file
             except Exception as e:
