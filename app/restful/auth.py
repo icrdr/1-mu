@@ -43,6 +43,8 @@ class AuthApi(Resource):
                 url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code" % \
                     (app.config['WX_KF_APPID'],
                     app.config['WX_KF_APPSECRET'], args['wxcode'])
+            print(url)
+            print(args['wxtype'])
             try:
                 r = requests.get(url)
                 json = r.json()
