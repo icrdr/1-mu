@@ -159,7 +159,7 @@ class UploadApi(Resource):
                 psd = PSDImage.open(os.path.join(path, filename))
                 psd.compose().save(os.path.join(path, random_name+'.png'))
 
-            if format in ['png','jpg','psd']:
+            if format in ['png','jpg','psd','jpeg']:
                 im_path = ''
                 if format=='psd':
                     im_path = os.path.join(path, filename)
