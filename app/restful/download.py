@@ -7,7 +7,7 @@ from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
 from datetime import datetime
 import os, shortuuid, zipfile
-from . import buildUrl
+from ..utility import buildUrl
 
 n_download = api.namespace('api/download', description='upload operations')
 
@@ -44,7 +44,8 @@ class DownloadApi(Resource):
 
                 zipf.close()
                 return {'download_url': buildUrl(zip_file, dir='')}, 200
-            except:
+            except Exception as e:
+                print(e)
                 api.abort(400, "zip failure")
         else:
             api.abort(400, "file doesn't exist")

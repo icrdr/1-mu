@@ -1,5 +1,7 @@
 import os
 class Config:
+    DOMAIN_URL='http://localhost:5000'
+
     SECRET_KEY = os.environ.get('SECRET_KEY')
     # link to mysql
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
@@ -24,9 +26,11 @@ class Config:
     RESTPLUS_VALIDATE = True
 
     # wechat Oauth 2.0
-    WECHAT_APPID = 'wx9c88c3320f959b7c'
+    WX_GZ_APPID = 'wxe2e76dfd60ec74b1'
+    WX_GZ_APPSECRET = '8795414bc52b98b92cc7918a13a01d7d'
 
-    WECHAT_APPSECRET = 'e79669c7d74a548e0a95aa2bf4952913'
+    WX_KF_APPID = 'wx9c88c3320f959b7c'
+    WX_KF_APPSECRET = 'e79669c7d74a548e0a95aa2bf4952913'
 
     # CORS_HEADER = 'Content-Type, auth'
     CORS_RESOURCES = {r"/*":{"origins":"http://localhost:3000"}}

@@ -1,7 +1,7 @@
 from flask_restplus import Resource, reqparse, fields
 from .. import api, db
 from ..model import Project, Stage
-from . import buildUrl
+from ..utility import buildUrl
 from datetime import datetime
 
 n_porject = api.namespace('api/project', description='projects operations')

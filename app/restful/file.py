@@ -7,17 +7,25 @@ from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
 from datetime import datetime
 import os, shortuuid
-from . import buildUrl
+from ..utility import buildUrl
 from psd_tools import PSDImage
 from PIL import Image
 
 ns_file = api.namespace('api/file', description='upload operations')
 
+m_wx_user = api.model('user', {
+    'id': fields.Integer(description="Unique identifier for the user."),
+    'nickname': fields.String(description="Display name for the user."),
+    'headimg_url': fields.String(description="The avatar url for the user."),
+})
+
 m_user = api.model('user', {
     'id': fields.Integer,
     'name': fields.String,
-    'avatar_url': fields.String(description="The avatar url for the user."),
+    'avatar_url': fields.String(attribute=lambda x: buildUrl(x.avatar_url), description="The avatar url for the user."),
+    'wx_user': fields.Nested(m_wx_user),
 })
+
 m_preview = api.model('preview', {
     'url': fields.String(attribute=lambda x: buildUrl(x.url), description="The avatar url for the user."),
 })

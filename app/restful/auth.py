@@ -13,7 +13,7 @@ n_auth = api.namespace('api/token', description='Authorization Operations')
 g_user = reqparse.RequestParser()
 g_user.add_argument('Authorization', location='headers')
 g_user.add_argument('wxcode', location='args')
-
+g_user.add_argument('wxtype', location='args')
 
 @n_auth.route('')
 class AuthApi(Resource):
@@ -34,9 +34,15 @@ class AuthApi(Resource):
             else:
                 return api.abort(400, "user not exist")
         elif args['wxcode']:
-            url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code" % \
-                (app.config['WECHAT_APPID'],
-                 app.config['WECHAT_APPSECRET'], args['wxcode'])
+            url = ''
+            if args['wxtype'] == 'gz':
+                url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code" % \
+                    (app.config['WX_GZ_APPID'],
+                    app.config['WX_GZ_APPSECRET'], args['wxcode'])
+            elif args['wxtype'] == 'kf':
+                url = "https://api.weixin.qq.com/sns/oauth2/access_token?appid=%s&secret=%s&code=%s&grant_type=authorization_code" % \
+                    (app.config['WX_KF_APPID'],
+                    app.config['WX_KF_APPSECRET'], args['wxcode'])
             try:
                 r = requests.get(url)
                 json = r.json()
@@ -91,11 +97,13 @@ class AuthApi(Resource):
                             }, 200
                         else:
                             return json, 400
-                    except:
+                    except Exception as e:
+                        print(e)
                         return api.abort(400, "bad connection")
                 else:
                     return json, 400
-            except:
+            except Exception as e:
+                print(e)
                 return api.abort(400, "bad connection")
         else:
             return api.abort(400, "bad auth")

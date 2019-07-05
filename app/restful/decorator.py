@@ -21,7 +21,8 @@ def permission_required(permission=None):
             if args['token']:
                 try:
                     data = jwt.decode(args['token'], app.config['SECRET_KEY'])
-                except:
+                except Exception as e:
+                    print(e)
                     return api.abort(400, "bad token")
             else:
                 return api.abort(400, "no token")

@@ -2,11 +2,18 @@ from flask_restplus import Resource, reqparse, fields
 from flask import g, request
 from .. import api, db
 from ..model import User, PERMISSIONS
-
+from ..utility import buildUrl
 from werkzeug.security import generate_password_hash
 from .decorator import permission_required, admin_required
 
 n_user = api.namespace('api/user', description='User Operations')
+
+m_wx_user = api.model('user', {
+    'id': fields.Integer(description="Unique identifier for the user."),
+    'nickname': fields.String(description="Display name for the user."),
+    'sex': fields.String(description="The title for the user."),
+    'headimg_url': fields.String(description="The avatar url for the user."),
+})
 
 m_user = api.model('user', {
     'id': fields.Integer(description="Unique identifier for the user."),
@@ -14,7 +21,7 @@ m_user = api.model('user', {
     'title': fields.String(description="The title for the user."),
     'email': fields.String(description="The email address for the user."),
     'phone': fields.String(description="The phone number for the user."),
-    'avatar_url': fields.Url(description="The avatar url for the user."),
+    'avatar_url': fields.String(attribute=lambda x: buildUrl(x.avatar_url), description="The avatar url for the user."),
     'reg_date': fields.String(description="Registration date for the user."),
     'role': fields.String(
         attribute=lambda x: str(x.role.name),
@@ -28,6 +35,7 @@ m_user = api.model('user', {
         attribute=lambda x: len(x.follower_users),
         description="The count of user's follower."
     ),
+    'wx_user': fields.Nested(m_wx_user),
 })
 
 g_user = reqparse.RequestParser()
