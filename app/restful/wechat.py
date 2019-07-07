@@ -22,9 +22,6 @@ g_wx.add_argument('timestamp', required=True, location='args')
 g_wx.add_argument('nonce', required=True, location='args')
 g_wx.add_argument('echostr', location='args')
 
-p_wx = reqparse.RequestParser()
-p_wx.add_argument('xml', location='files')
-
 @n_wechat.route('')
 class WxApi(Resource):
     def get(self):
@@ -47,20 +44,13 @@ class WxApi(Resource):
             return api.abort(403, "sign not right")
 
     def post(self):
-        args = p_wx.parse_args()
-        # print(request.data)
-        # xml_dict = xmltodict.parse(args['data'])
-        # xml_dict = xml_dict.get("xml")
-        print(request)
-        print(args['xml'])
-        # print(xml_dict)
-        # return {'ok':'ok'}
+        # xml can't parse by the RequestParser, so we have to use the flask request.data
         xml_str = request.data
         print(request.data)
         if not xml_str:
-            return""
+            return api.abort(403, "nothing get")
         # 对xml字符串进行解析
-        xml_dict = xmltodict.parse(xml_str)
+        xml_dict = xmltodict.parse(xml_str, encoding='utf-8')
         xml_dict = xml_dict.get("xml")
 
         # 提取消息类型
