@@ -24,27 +24,19 @@ g_wx.add_argument('echostr', location='args')
 class WxApi(Resource):
     def get(self):
         args = g_wx.parse_args()
-        print(args['timestamp'])
-        print(args['signature'])
-        print(args['nonce'])
-        print(args['echostr'])
         echostr = request.args.get("echostr")
-        print(echostr)
         li = ['yixuechahua', args['timestamp'], args['nonce']]
 
         li.sort()
-        print(li)
         #拼接字符串 不编码的话python会报错
         tmp_str = "".join(li).encode('utf-8')
-        print(tmp_str)
         #进行sha1加密
         sign = hashlib.sha1(tmp_str).hexdigest()
-        print(sign)
         #将自己的签名与微信进行对比
         if args['signature'] == sign:
             print('yes!')
             #如果签名与微信的一致需返回echostr给微信
-            return int(echostr)
+            return int(args['echostr'])
         else:
             print('no!')
             return api.abort(403, "sign not right")
