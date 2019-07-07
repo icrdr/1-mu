@@ -17,17 +17,26 @@ g_user = reqparse.RequestParser()
 g_user.add_argument('wxcode', required=True, location='args')
 g_user.add_argument('wxtype', required=True, location='args')
 
-@app.route('/api/wechat',methods=['GET','POST'])
+g_wx = reqparse.RequestParser()
+g_wx.add_argument('echostr', required=True, location='args')
+
+@app.route('/api/wechat',methods=['GET'])
 def wechat():
     '''对接微信公众号'''
     #参数是在请求链接后携带的
     #微信的签名
+    args = g_wx.parse_args()
     signature = request.args.get("signature")
     #我们签名所需的两个参数
     timestamp = request.args.get("timestamp")
     nonce = request.args.get("nonce")
     #签名校验成功后需返回给微信的
     echostr = request.args.get("echostr")
+    print(signature)
+    print(timestamp)
+    print(nonce)
+    print(echostr)
+    print(args['echostr'])
     #参数校验
     if not all([signature, timestamp, nonce]):
         abort(400)
