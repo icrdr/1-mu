@@ -10,6 +10,7 @@ import requests
 import shortuuid
 import urllib
 import xmltodict
+import time
 from datetime import datetime, timedelta
 
 n_wechat = api.namespace('api/wechat', description='Authorization Operations')
@@ -46,13 +47,52 @@ class WxApi(Resource):
             return api.abort(403, "sign not right")
 
     def post(self):
-        args = p_wx.parse_args()
-        print(request.data)
-        xml_dict = xmltodict.parse(args['data'])
+        # args = p_wx.parse_args()
+        # print(request.data)
+        # xml_dict = xmltodict.parse(args['data'])
+        # xml_dict = xml_dict.get("xml")
+        # print(args['data'])
+        # print(xml_dict)
+        # return {'ok':'ok'}
+        xml_str = request.data
+        if not xml_str:
+            return""
+        # 对xml字符串进行解析
+        xml_dict = xmltodict.parse(xml_str)
         xml_dict = xml_dict.get("xml")
-        print(args['data'])
-        print(xml_dict)
-        return {'ok':'ok'}
+
+        # 提取消息类型
+        msg_type = xml_dict.get("MsgType")
+        if msg_type == "text":
+        # 表示发送的是文本消息
+        # 构造返回值，经由微信服务器回复给用户的消息内容
+            resp_dict = {
+                "xml": {
+                    "ToUserName": xml_dict.get("FromUserName"),
+                    "FromUserName": xml_dict.get("ToUserName"),
+                    "CreateTime": int(time.time()),
+                    "MsgType": "text",
+                    "Content": "you say:" + xml_dict.get("Content")
+                }
+            }
+
+            # 将字典转换为xml字符串
+            resp_xml_str = xmltodict.unparse(resp_dict)
+            # 返回消息数据给微信服务器
+            return resp_xml_str
+        else:
+            resp_dict = {
+                "xml": {
+                    "ToUserName": xml_dict.get("FromUserName"),
+                    "FromUserName": xml_dict.get("ToUserName"),
+                    "CreateTime": int(time.time()),
+                    "MsgType": "text",
+                    "Content": "Dear I Love you so much"
+                }
+            }
+            resp_xml_str = xmltodict.unparse(resp_dict)
+            # 返回消息数据给微信服务器
+            return resp_xml_str
             
     
 g_user = reqparse.RequestParser()
