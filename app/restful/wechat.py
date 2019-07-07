@@ -13,46 +13,45 @@ from datetime import datetime, timedelta
 
 n_wechat = api.namespace('api/wechat', description='Authorization Operations')
 
-
-g_wx = reqparse.RequestParser()
-g_wx.add_argument('signature', required=True, location='args')
-g_wx.add_argument('timestamp', required=True, location='args')
-g_wx.add_argument('nonce', required=True, location='args')
-g_wx.add_argument('echostr', location='args')
-
-@n_wechat.route('')
-class WxApi(Resource):
-    def get(self):
-        args = g_wx.parse_args()
-        print(args['timestamp'])
-        print(args['signature'])
-        print(args['nonce'])
-        print(args['echostr'])
-        echostr = request.args.get("echostr")
-        print(echostr)
-        li = ['yixuechahua', args['timestamp'], args['nonce']]
-
-        li.sort()
-        print(li)
-        #拼接字符串 不编码的话python会报错
-        tmp_str = "".join(li).encode('utf-8')
-        print(tmp_str)
-        #进行sha1加密
-        sign = hashlib.sha1(tmp_str).hexdigest()
-        print(sign)
-        #将自己的签名与微信进行对比
-        if args['signature'] == sign:
-            print('yes!')
-            #如果签名与微信的一致需返回echostr给微信
-            return echostr
-        else:
-            print('no!')
-            return api.abort(403, "sign not right")
-            
-    
 g_user = reqparse.RequestParser()
 g_user.add_argument('wxcode', required=True, location='args')
 g_user.add_argument('wxtype', required=True, location='args')
+
+@app.route('/api/wechat',methods=['GET','POST'])
+def wechat():
+    '''对接微信公众号'''
+    #参数是在请求链接后携带的
+    #微信的签名
+    signature = request.args.get("signature")
+    #我们签名所需的两个参数
+    timestamp = request.args.get("timestamp")
+    nonce = request.args.get("nonce")
+    #签名校验成功后需返回给微信的
+    echostr = request.args.get("echostr")
+    #参数校验
+    if not all([signature, timestamp, nonce]):
+        abort(400)
+
+    #开始签名
+    #将数据添加进数组
+    li = ['yixuechahua', timestamp, nonce]
+
+    #排序
+    li.sort()
+
+    #拼接字符串
+    #不编码的话python会报错
+    tmp_str = "".join(li).encode('utf-8')
+
+    #进行sha1加密
+    sign = hashlib.sha1(tmp_str).hexdigest()
+
+    #将自己的签名与微信进行对比
+    if signature != sign:
+        abort(403)
+    #如果签名与微信的一致需返回echostr给微信
+    else:
+        return echostr
 
 @n_wechat.route('/auth')
 class WxAuthApi(Resource):
