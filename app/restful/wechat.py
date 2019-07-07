@@ -66,7 +66,7 @@ class WxApi(Resource):
         }
 
         # 将字典转换为xml字符串
-        resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
+        resp_xml_str = xmltodict.unparse(resp_dict, encoding='GBK')
         # 返回消息数据给微信服务器
         return resp_xml_str, 200
             
