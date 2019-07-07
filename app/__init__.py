@@ -6,19 +6,23 @@ from flask_cors import CORS
 from flask_migrate import Migrate, init as db_init, migrate as db_migrate, upgrade as db_upgrade
 from config import config
 import os
-
+import redis
 app = Flask(__name__)
-app.config.from_object(config[os.environ.get('FLASK_ENV') or 'development'])
+app.config.from_object(config[os.environ.get('FLASK_ENV')])
 
 # ODM
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+# APScheduler
 scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
 
-# restful
+#Redis
+r_db = redis.Redis(host='localhost')
+
+# Restful
 api = Api(app, doc='/api/doc/', version='1.0', title='EMU(一目) API', description='')
 
 # support CORS https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS

@@ -1,7 +1,7 @@
 from flask import request, Response
 import hashlib
 from flask_restplus import Resource, reqparse
-from .. import api, app, db, scheduler
+from .. import api, app, db, scheduler, r_db
 from ..model import User, WxUser, Option
 from werkzeug.security import check_password_hash, generate_password_hash
 import jwt
@@ -57,6 +57,7 @@ class WxApi(Resource):
             print(xml_dict['Event'])
             print(xml_dict['EventKey'])
             print(xml_dict['FromUserName'])
+            r_db.set('123', 1)
             option = Option.query.filter_by(name='wechat_access_token').first()
             url = "https://api.weixin.qq.com/cgi-bin/user/info"
             params = {
@@ -202,8 +203,21 @@ class WxTokenApi(Resource):
             trigger='interval',
             minutes=110
         )
+        
         return getAccessToken()
 
+g_check = reqparse.RequestParser()
+g_check.add_argument('scene_id', required=True, location='args')
+@n_wechat.route('/check')
+class WxLoginApi(Resource):
+    def get(self):
+        args = g_check.parse_args()
+        b = r_db.get(args['scene_id'])
+        print(b)
+        if b=='1':
+            return {'ok':'ok'}
+        else:
+            return {'no':'f!'}
 
 @n_wechat.route('/qrcode')
 class WxQrcodeApi(Resource):
@@ -217,6 +231,7 @@ class WxQrcodeApi(Resource):
                 "scene": {"scene_id": 123}
             }
         }
+        r_db.set('123', 0)
         try:
             # json.dumps for json format. Otherwise, wechat will return error.
             data = requests.post(url, data=json.dumps(data)).json()
