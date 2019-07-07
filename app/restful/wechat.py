@@ -54,19 +54,19 @@ class WxApi(Resource):
         xml_dict = xml_dict['xml']
         print(xml_dict)
         # 提取消息类型
-        msg_type = xml_dict.get("MsgType")
+        # msg_type = xml_dict.get("MsgType")
         resp_dict = {
             "xml": {
-                "ToUserName": xml_dict.get("FromUserName"),
-                "FromUserName": xml_dict.get("ToUserName"),
+                "ToUserName": xml_dict['FromUserName'],
+                "FromUserName": xml_dict['ToUserName'],
                 "CreateTime": int(time.time()),
                 "MsgType": "text",
-                "Content": "you say:" + xml_dict.get("Content")
+                "Content": "you say:" + xml_dict['Content']
             }
         }
 
         # 将字典转换为xml字符串
-        resp_xml_str = xmltodict.unparse(resp_dict)
+        resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
         # 返回消息数据给微信服务器
         return resp_xml_str, 200
             
