@@ -51,6 +51,7 @@ class WxApi(Resource):
         # print(request.data)
         # xml_dict = xmltodict.parse(args['data'])
         # xml_dict = xml_dict.get("xml")
+        print(request)
         print(args['xml'])
         # print(xml_dict)
         # return {'ok':'ok'}
