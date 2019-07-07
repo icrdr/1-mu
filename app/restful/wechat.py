@@ -28,18 +28,18 @@ class WxApi(Resource):
         print(args['timestamp'])
         print(args['signature'])
         print(args['nonce'])
-        print(args['nonce'])
+        print(args['echostr'])
 
         li = ['yixuechahua', args['timestamp'], args['nonce']]
 
         li.sort()
-
+        print(li)
         #拼接字符串 不编码的话python会报错
         tmp_str = "".join(li).encode('utf-8')
-
+        print(tmp_str)
         #进行sha1加密
         sign = hashlib.sha1(tmp_str).hexdigest()
-
+        print(sign)
         #将自己的签名与微信进行对比
         if args['signature'] != sign:
             return api.abort(403, "sign not right")
