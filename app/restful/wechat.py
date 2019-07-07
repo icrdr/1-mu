@@ -22,6 +22,7 @@ g_wx.add_argument('timestamp', required=True, location='args')
 g_wx.add_argument('nonce', required=True, location='args')
 g_wx.add_argument('echostr', location='args')
 
+
 @n_wechat.route('')
 class WxApi(Resource):
     def get(self):
@@ -30,14 +31,14 @@ class WxApi(Resource):
         li = ['yixuechahua', args['timestamp'], args['nonce']]
 
         li.sort()
-        #拼接字符串 不编码的话python会报错
+        # 拼接字符串 不编码的话python会报错
         tmp_str = "".join(li).encode('utf-8')
-        #进行sha1加密
+        # 进行sha1加密
         sign = hashlib.sha1(tmp_str).hexdigest()
-        #将自己的签名与微信进行对比
+        # 将自己的签名与微信进行对比
         if args['signature'] == sign:
             print('yes!')
-            #如果签名与微信的一致需返回echostr给微信
+            # 如果签名与微信的一致需返回echostr给微信
             return int(args['echostr']), 200
         else:
             print('no!')
@@ -46,14 +47,14 @@ class WxApi(Resource):
     def post(self):
         # xml can't parse by the RequestParser, so we have to use the flask request.data
         xml_str = request.data
-        
+
         if not xml_str:
             return api.abort(403, "nothing get")
         # 对xml字符串进行解析
         xml_dict = xmltodict.parse(xml_str, encoding='utf-8')
         xml_dict = xml_dict['xml']
         print(xml_dict['MsgType'])
-        if(xml_dict['MsgType']=='event'):
+        if(xml_dict['MsgType'] == 'event'):
             print(xml_dict['Event'])
             print(xml_dict['EventKey'])
             print(xml_dict['FromUserName'])
@@ -64,7 +65,7 @@ class WxApi(Resource):
                 "access_token": option.value,
                 "openid": xml_dict['FromUserName'],
             }
-            try:  
+            try:
                 res = requests.get(url, params=params)
                 res.encoding = 'utf-8'
                 data = res.json()
@@ -72,7 +73,7 @@ class WxApi(Resource):
             except Exception as e:
                 print(e)
                 # return api.abort(400, "bad connection")
-        elif(xml_dict['MsgType']=='text'):
+        elif(xml_dict['MsgType'] == 'text'):
             # 提取消息类型
             # msg_type = xml_dict.get("MsgType")
             resp_dict = {
@@ -87,13 +88,14 @@ class WxApi(Resource):
 
             # 将字典转换为xml字符串
             resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
-            # 返回消息数据给微信服务器 
+            # 返回消息数据给微信服务器
             return Response(resp_xml_str, mimetype='text/xml')
-            
-    
+
+
 g_user = reqparse.RequestParser()
 g_user.add_argument('wxcode', required=True, location='args')
 g_user.add_argument('wxtype', required=True, location='args')
+
 
 @n_wechat.route('/auth')
 class WxAuthApi(Resource):
@@ -103,7 +105,7 @@ class WxAuthApi(Resource):
         # step 1: get access code from client.
         url = 'https://api.weixin.qq.com/sns/oauth2/access_token'
         appid = secret = ''
-        
+
         if args['wxtype'] == 'gz':
             appid = app.config['WECHAT_GZ_APPID']
             secret = app.config['WECHAT_GZ_APPSECRET']
@@ -203,8 +205,9 @@ class WxTokenApi(Resource):
             trigger='interval',
             minutes=110
         )
-        
+
         return getAccessToken()
+
 
 g_check = reqparse.RequestParser()
 g_check.add_argument('scene_str', location='args')
@@ -212,17 +215,18 @@ g_check.add_argument('scene_str', location='args')
 class WxLoginApi(Resource):
     def get(self):
         args = g_check.parse_args()
-        openid = r_db.get(args['scene_str'])
+        openid = r_db.get(args['scene_str']).decode('UTF-8')
         print(openid)
-        if openid:
-            return {'ok':'ok'}
+        if openid != 'None':
+            return {'ok': 'ok'}
         else:
-            return {'no':'f!'}
+            return {'no': 'f!'}
+
 
 @n_wechat.route('/qrcode')
 class WxQrcodeApi(Resource):
     def get(self):
-        scene_str='123'
+        scene_str = '123'
         option = Option.query.filter_by(name='wechat_access_token').first()
         url = 'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s' % option.value
         data = {
@@ -237,7 +241,7 @@ class WxQrcodeApi(Resource):
             # json.dumps for json format. Otherwise, wechat will return error.
             data = requests.post(url, data=json.dumps(data)).json()
             if 'ticket' in data:
-                return {'ticket':data['ticket'],'scene_str':scene_str},200
+                return {'ticket': data['ticket'], 'scene_str': scene_str}, 200
             else:
                 return data, 400
         except Exception as e:
