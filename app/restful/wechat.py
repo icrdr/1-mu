@@ -56,6 +56,21 @@ class WxApi(Resource):
         if(xml_dict['MsgType']=='event'):
             print(xml_dict['Event'])
             print(xml_dict['EventKey'])
+            print(xml_dict['FromUserName'])
+            option = Option.query.filter_by(name='wechat_access_token').first()
+            url = "https://api.weixin.qq.com/cgi-bin/user/info"
+            params = {
+                "access_token": option.value,
+                "openid": xml_dict['FromUserName'],
+            }
+            try:  
+                res = requests.get(url, params=params)
+                res.encoding = 'utf-8'
+                data = res.json()
+                print(data)
+            except Exception as e:
+                print(e)
+                # return api.abort(400, "bad connection")
         elif(xml_dict['MsgType']=='text'):
             # 提取消息类型
             # msg_type = xml_dict.get("MsgType")
