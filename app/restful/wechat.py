@@ -214,7 +214,7 @@ class WxLoginApi(Resource):
         args = g_check.parse_args()
         b = r_db.get(args['scene_id'])
         print(b)
-        if b=='1':
+        if b == 1:
             return {'ok':'ok'}
         else:
             return {'no':'f!'}
