@@ -52,24 +52,26 @@ class WxApi(Resource):
         # 对xml字符串进行解析
         xml_dict = xmltodict.parse(xml_str, encoding='utf-8')
         xml_dict = xml_dict['xml']
-        print(xml_dict['Event'])
         print(xml_dict['MsgType'])
-        # 提取消息类型
-        # msg_type = xml_dict.get("MsgType")
-        resp_dict = {
-            "xml": {
-                "ToUserName": xml_dict['FromUserName'],
-                "FromUserName": xml_dict['ToUserName'],
-                "CreateTime": int(time.time()),
-                "MsgType": "text",
-                "Content": "你刚才说的是：" + xml_dict['Content']
+        if(xml_dict['MsgType']=='event'):
+            print(xml_dict['Event'])
+        elif(xml_dict['MsgType']=='txt'):
+            # 提取消息类型
+            # msg_type = xml_dict.get("MsgType")
+            resp_dict = {
+                "xml": {
+                    "ToUserName": xml_dict['FromUserName'],
+                    "FromUserName": xml_dict['ToUserName'],
+                    "CreateTime": int(time.time()),
+                    "MsgType": "text",
+                    "Content": "你刚才说的是：" + xml_dict['Content']
+                }
             }
-        }
 
-        # 将字典转换为xml字符串
-        resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
-        # 返回消息数据给微信服务器 
-        return Response(resp_xml_str, mimetype='text/xml')
+            # 将字典转换为xml字符串
+            resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
+            # 返回消息数据给微信服务器 
+            return Response(resp_xml_str, mimetype='text/xml')
             
     
 g_user = reqparse.RequestParser()
