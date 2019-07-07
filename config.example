@@ -2,11 +2,12 @@ import os
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
 class Config:
-    DOMAIN_URL = 'http://localhost:5000'
+    DOMAIN_URL = 'http://domain.com'
+    DATABASE_URI='mysql://username:password@server/db'
 
-    SECRET_KEY = os.environ.get('SECRET_KEY')
+    SECRET_KEY = ''
     # link to mysql
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = DATABASE_URI
 
     # offical tell me to set to true
     SQLALCHEMY_TRACK_MODIFICATIONS = True
@@ -30,20 +31,20 @@ class Config:
     RESTPLUS_VALIDATE = True
 
     # wechat 
-    WECHAT_GZ_APPID = 'wxe2e76dfd60ec74b1'
-    WECHAT_GZ_APPSECRET = '8795414bc52b98b92cc7918a13a01d7d'
+    WECHAT_GZ_APPID = ''
+    WECHAT_GZ_APPSECRET = ''
 
-    WECHAT_KF_APPID = 'wx9c88c3320f959b7c'
-    WECHAT_KF_APPSECRET = 'e79669c7d74a548e0a95aa2bf4952913'
+    WECHAT_KF_APPID = ''
+    WECHAT_KF_APPSECRET = ''
 
     # CORS_HEADER = 'Content-Type, auth'
-    CORS_RESOURCES = {r"/*": {"origins": "http://localhost:3000"}}
+    CORS_RESOURCES = {r"/*": {"origins": ["http://domain.com","http://domain.com"]}}
     CORS_METHODS = "GET,POST,OPTIONS"
     CORS_SUPPORTS_CREDENTIALS = True
 
     # APScheduler
     SCHEDULER_JOBSTORES = {
-        'default': SQLAlchemyJobStore(url=os.environ.get('DATABASE_URL'))
+        'default': SQLAlchemyJobStore(url = DATABASE_URI)
     }
     SCHEDULER_API_ENABLED = True
 
