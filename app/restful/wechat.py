@@ -69,7 +69,7 @@ class WxApi(Resource):
         resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
         print(resp_xml_str)
         # 返回消息数据给微信服务器
-        return resp_xml_str, 200, {'Content-Type': 'text/xml; charset=utf-8'}
+        return resp_xml_str, 200, {'Content-Type': 'text/html; charset=utf-8'}
             
     
 g_user = reqparse.RequestParser()
@@ -230,7 +230,7 @@ def getAccessToken():
                 )
                 db.session.add(new_option)
             db.session.commit()
-            return {'我发觉阿瑟警方撒':'爱上了对方金额'}, 200
+            return data, 200
         else:
             return data, 400
 
