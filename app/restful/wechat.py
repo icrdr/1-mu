@@ -60,7 +60,7 @@ def wechat():
         abort(403)
     #如果签名与微信的一致需返回echostr给微信
     else:
-        return echostr
+        return args['echostr']
 
 @n_wechat.route('/auth')
 class WxAuthApi(Resource):
