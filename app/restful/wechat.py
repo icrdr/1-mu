@@ -17,7 +17,7 @@ g_user = reqparse.RequestParser()
 g_user.add_argument('wxcode', required=True, location='args')
 g_user.add_argument('wxtype', required=True, location='args')
 
-@app.route('/wechat',methods=['GET','POST'])
+@app.route('/api/wechat',methods=['GET','POST'])
 def wechat():
     '''对接微信公众号'''
     #参数是在请求链接后携带的
