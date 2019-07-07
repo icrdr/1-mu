@@ -18,7 +18,7 @@ g_wx = reqparse.RequestParser()
 g_wx.add_argument('signature', required=True, location='args')
 g_wx.add_argument('timestamp', required=True, location='args')
 g_wx.add_argument('nonce', required=True, location='args')
-g_wx.add_argument('echostr', required=True, location='args')
+g_wx.add_argument('echostr', location='args')
 
 @n_wechat.route('')
 class WxApi(Resource):
