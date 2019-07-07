@@ -57,7 +57,7 @@ class WxApi(Resource):
             print(xml_dict['Event'])
             print(xml_dict['EventKey'])
             print(xml_dict['FromUserName'])
-            r_db.set('123', 1)
+            r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
             option = Option.query.filter_by(name='wechat_access_token').first()
             url = "https://api.weixin.qq.com/cgi-bin/user/info"
             params = {
@@ -207,14 +207,14 @@ class WxTokenApi(Resource):
         return getAccessToken()
 
 g_check = reqparse.RequestParser()
-g_check.add_argument('scene_id', required=True, location='args')
+g_check.add_argument('scene_str', required=True, location='args')
 @n_wechat.route('/check')
 class WxLoginApi(Resource):
     def get(self):
         args = g_check.parse_args()
-        b = int(r_db.get('123'))
-        print(b)
-        if b:
+        openid = r_db.get(args['scene_str'])
+        print(openid)
+        if openid:
             return {'ok':'ok'}
         else:
             return {'no':'f!'}
@@ -222,21 +222,22 @@ class WxLoginApi(Resource):
 @n_wechat.route('/qrcode')
 class WxQrcodeApi(Resource):
     def get(self):
+        scene_str='123'
         option = Option.query.filter_by(name='wechat_access_token').first()
         url = 'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s' % option.value
         data = {
             "expire_seconds": 604800,
-            "action_name": "QR_SCENE",
+            "action_name": "QR_STR_SCENE",
             "action_info": {
-                "scene": {"scene_id": 123}
+                "scene": {"scene_str": scene_str}
             }
         }
-        r_db.set('123', 0)
+        r_db.set(scene_str, 'None')
         try:
             # json.dumps for json format. Otherwise, wechat will return error.
             data = requests.post(url, data=json.dumps(data)).json()
             if 'ticket' in data:
-                return {'ticket':data['ticket']},200
+                return {'ticket':data['ticket'],'scene_str':scene_str},200
             else:
                 return data, 400
         except Exception as e:
