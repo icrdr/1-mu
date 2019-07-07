@@ -23,13 +23,13 @@ g_wx.add_argument('echostr', location='args')
 @n_wechat.route('')
 class WxApi(Resource):
     def get(self):
-        
         args = g_wx.parse_args()
         print(args['timestamp'])
         print(args['signature'])
         print(args['nonce'])
         print(args['echostr'])
-
+        echostr = request.args.get("echostr")
+        print(echostr)
         li = ['yixuechahua', args['timestamp'], args['nonce']]
 
         li.sort()
@@ -44,7 +44,7 @@ class WxApi(Resource):
         if args['signature'] == sign:
             print('yes!')
             #如果签名与微信的一致需返回echostr给微信
-            return args['echostr']
+            return echostr
         else:
             print('no!')
             return api.abort(403, "sign not right")
