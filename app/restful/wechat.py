@@ -55,7 +55,8 @@ class WxApi(Resource):
         print(xml_dict['MsgType'])
         if(xml_dict['MsgType']=='event'):
             print(xml_dict['Event'])
-        elif(xml_dict['MsgType']=='txt'):
+            print(xml_dict['EventKey'])
+        elif(xml_dict['MsgType']=='text'):
             # 提取消息类型
             # msg_type = xml_dict.get("MsgType")
             resp_dict = {
