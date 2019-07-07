@@ -55,24 +55,12 @@ class WxApi(Resource):
         xml_dict = xml_dict['xml']
         print(xml_dict['MsgType'])
         if(xml_dict['MsgType'] == 'event'):
-            print(xml_dict['Event'])
+
             print(xml_dict['EventKey'])
             print(xml_dict['FromUserName'])
             r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
-            option = Option.query.filter_by(name='wechat_access_token').first()
-            url = "https://api.weixin.qq.com/cgi-bin/user/info"
-            params = {
-                "access_token": option.value,
-                "openid": xml_dict['FromUserName'],
-            }
-            try:
-                res = requests.get(url, params=params)
-                res.encoding = 'utf-8'
-                data = res.json()
-                print(data)
-            except Exception as e:
-                print(e)
-                # return api.abort(400, "bad connection")
+            
+            # return api.abort(400, "bad connection")
         elif(xml_dict['MsgType'] == 'text'):
             # 提取消息类型
             # msg_type = xml_dict.get("MsgType")
@@ -218,15 +206,29 @@ class WxLoginApi(Resource):
         openid = r_db.get(args['scene_str']).decode('UTF-8')
         print(openid)
         if openid != 'None':
-            return {'ok': 'ok'}
+            option = Option.query.filter_by(name='wechat_access_token').first()
+            url = "https://api.weixin.qq.com/cgi-bin/user/info"
+            params = {
+                "access_token": option.value,
+                "openid": openid,
+            }
+            try:
+                res = requests.get(url, params=params)
+                res.encoding = 'utf-8'
+                data = res.json()
+                return data, 200
+
+            except Exception as e:
+                print(e)
+                return api.abort(400, "bad connection")
         else:
-            return {'no': 'f!'}
+            return {'no': 'f!'}, 200
 
 
 @n_wechat.route('/qrcode')
 class WxQrcodeApi(Resource):
     def get(self):
-        scene_str = '123'
+        scene_str = 'login'+str(shortuuid.uuid())
         option = Option.query.filter_by(name='wechat_access_token').first()
         url = 'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s' % option.value
         data = {
