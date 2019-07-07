@@ -44,7 +44,7 @@ class WxApi(Resource):
         if args['signature'] == sign:
             print('yes!')
             #如果签名与微信的一致需返回echostr给微信
-            return echostr
+            return int(echostr)
         else:
             print('no!')
             return api.abort(403, "sign not right")
