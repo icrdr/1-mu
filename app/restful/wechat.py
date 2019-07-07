@@ -52,6 +52,7 @@ class WxApi(Resource):
         xml_dict = xml_dict.get("xml")
         print(args['data'])
         print(xml_dict)
+        return {'ok':'ok'}
             
     
 g_user = reqparse.RequestParser()
