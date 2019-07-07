@@ -22,7 +22,7 @@ g_wx.add_argument('nonce', required=True, location='args')
 g_wx.add_argument('echostr', location='args')
 
 p_wx = reqparse.RequestParser()
-p_wx.add_argument('data', required=True)
+p_wx.add_argument('data')
 
 @n_wechat.route('')
 class WxApi(Resource):
