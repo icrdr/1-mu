@@ -46,13 +46,13 @@ class WxApi(Resource):
     def post(self):
         # xml can't parse by the RequestParser, so we have to use the flask request.data
         xml_str = request.data
-        print(request.data)
+        
         if not xml_str:
             return api.abort(403, "nothing get")
         # 对xml字符串进行解析
         xml_dict = xmltodict.parse(xml_str, encoding='utf-8')
-        xml_dict = xml_dict.get("xml")
-
+        xml_dict = xml_dict['xml']
+        print(xml_dict)
         # 提取消息类型
         msg_type = xml_dict.get("MsgType")
         resp_dict = {
