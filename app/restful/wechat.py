@@ -1,3 +1,5 @@
+from flask import request, abort
+import hashlib
 from flask_restplus import Resource, reqparse
 from .. import api, app, db, scheduler
 from ..model import User, WxUser, Option
@@ -15,6 +17,41 @@ g_user = reqparse.RequestParser()
 g_user.add_argument('wxcode', required=True, location='args')
 g_user.add_argument('wxtype', required=True, location='args')
 
+@app.route('/wechat',methods=['GET','POST'])
+def wechat():
+    '''对接微信公众号'''
+    #参数是在请求链接后携带的
+    #微信的签名
+    signature = request.args.get("signature")
+    #我们签名所需的两个参数
+    timestamp = request.args.get("timestamp")
+    nonce = request.args.get("nonce")
+    #签名校验成功后需返回给微信的
+    echostr = request.args.get("echostr")
+    #参数校验
+    if not all([signature, timestamp, nonce]):
+        abort(400)
+
+    #开始签名
+    #将数据添加进数组
+    li = ['yixuechahua118', timestamp, nonce]
+
+    #排序
+    li.sort()
+
+    #拼接字符串
+    #不编码的话python会报错
+    tmp_str = "".join(li).encode('utf-8')
+
+    #进行sha1加密
+    sign = hashlib.sha1(tmp_str).hexdigest()
+
+    #将自己的签名与微信进行对比
+    if signature != sign:
+        abort(403)
+    #如果签名与微信的一致需返回echostr给微信
+    else:
+        return echostr
 
 @n_wechat.route('/auth')
 class WxAuthApi(Resource):
@@ -38,12 +75,9 @@ class WxAuthApi(Resource):
             "secret": secret,
             "code": args['wxcode']
         }
-        print(params)
         try:  # step 2: get access_token from wechat serves.
             # data = requests.get(url, params=payload).json()
-            r = requests.get(url, params=params)
-            data=r.json()
-            print(r.url)
+            data = requests.get(url, params=params).json()
             if 'access_token' in data:
                 url = "https://api.weixin.qq.com/sns/userinfo"
                 params = {
