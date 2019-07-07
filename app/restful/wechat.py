@@ -230,7 +230,7 @@ def getAccessToken():
                 )
                 db.session.add(new_option)
             db.session.commit()
-            return data, 200
+            return {'我发觉阿瑟警方撒':'爱上了对方金额'}, 200
         else:
             return data, 400
 
