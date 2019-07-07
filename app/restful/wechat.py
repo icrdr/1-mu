@@ -41,11 +41,12 @@ class WxApi(Resource):
         sign = hashlib.sha1(tmp_str).hexdigest()
         print(sign)
         #将自己的签名与微信进行对比
-        if args['signature'] != sign:
-            return api.abort(403, "sign not right")
-        #如果签名与微信的一致需返回echostr给微信
+        if args['signature'] == sign:
+            #如果签名与微信的一致需返回echostr给微信
+            return args['echostr']
         else:
-            return args['echostr'], 200
+            return api.abort(403, "sign not right")
+            
     
 g_user = reqparse.RequestParser()
 g_user.add_argument('wxcode', required=True, location='args')
