@@ -23,7 +23,7 @@ g_wx.add_argument('nonce', required=True, location='args')
 g_wx.add_argument('echostr', location='args')
 
 p_wx = reqparse.RequestParser()
-p_wx.add_argument('data')
+p_wx.add_argument('xml', location='files')
 
 @n_wechat.route('')
 class WxApi(Resource):
@@ -47,11 +47,11 @@ class WxApi(Resource):
             return api.abort(403, "sign not right")
 
     def post(self):
-        # args = p_wx.parse_args()
+        args = p_wx.parse_args()
         # print(request.data)
         # xml_dict = xmltodict.parse(args['data'])
         # xml_dict = xml_dict.get("xml")
-        # print(args['data'])
+        print(args['xml'])
         # print(xml_dict)
         # return {'ok':'ok'}
         xml_str = request.data
