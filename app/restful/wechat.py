@@ -52,7 +52,8 @@ class WxApi(Resource):
         # 对xml字符串进行解析
         xml_dict = xmltodict.parse(xml_str, encoding='utf-8')
         xml_dict = xml_dict['xml']
-        print(xml_dict)
+        print(xml_dict['Event'])
+        print(xml_dict['MsgType'])
         # 提取消息类型
         # msg_type = xml_dict.get("MsgType")
         resp_dict = {
@@ -61,16 +62,14 @@ class WxApi(Resource):
                 "FromUserName": xml_dict['ToUserName'],
                 "CreateTime": int(time.time()),
                 "MsgType": "text",
-                "Content": "you say:" + xml_dict['Content']
+                "Content": "你刚才说的是：" + xml_dict['Content']
             }
         }
 
         # 将字典转换为xml字符串
         resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
-        print(resp_xml_str)
-        # 返回消息数据给微信服务器
+        # 返回消息数据给微信服务器 
         return Response(resp_xml_str, mimetype='text/xml')
-        return resp_xml_str, 200, {'Content-Type': 'text/html; charset=utf-8'}
             
     
 g_user = reqparse.RequestParser()
