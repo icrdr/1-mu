@@ -24,7 +24,7 @@ class WxAuthApi(Resource):
         # step 1: get access code from client.
         url = 'https://api.weixin.qq.com/sns/oauth2/access_token'
         appid = secret = ''
-
+        
         if args['wxtype'] == 'gz':
             appid = app.config['WECHAT_GZ_APPID']
             secret = app.config['WECHAT_GZ_APPSECRET']
@@ -32,22 +32,26 @@ class WxAuthApi(Resource):
             appid = app.config['WECHAT_KF_APPID']
             secret = app.config['WECHAT_KF_APPSECRET']
 
-        payload = {
+        params = {
             "grant_type": "authorization_code",
             "appid": appid,
             "secret": secret,
             "code": args['wxcode']
         }
+        print(params)
         try:  # step 2: get access_token from wechat serves.
-            data = requests.get(url, params=payload).json()
+            # data = requests.get(url, params=payload).json()
+            r = requests.get(url, params=params)
+            data=r.json()
+            print(r.url)
             if 'access_token' in data:
                 url = "https://api.weixin.qq.com/sns/userinfo"
-                payload = {
+                params = {
                     "access_token": data['access_token'],
                     "openid": data['openid'],
                 }
                 try:  # step 3: get userinfo with access_token from wechat serves.
-                    res = requests.get(url, params=payload)
+                    res = requests.get(url, params=params)
                     res.encoding = 'utf-8'
                     data = res.json()
                     if 'openid' in data:
