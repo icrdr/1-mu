@@ -46,7 +46,7 @@ class WxApi(Resource):
             return api.abort(403, "sign not right")
 
     def post(self):
-        args = g_wx.parse_args()
+        args = p_wx.parse_args()
         print(request.data)
         xml_dict = xmltodict.parse(args['data'])
         xml_dict = xml_dict.get("xml")
