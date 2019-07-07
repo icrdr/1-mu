@@ -23,8 +23,15 @@ g_wx.add_argument('echostr', location='args')
 @n_wechat.route('')
 class WxApi(Resource):
     def get(self):
+        
         args = g_wx.parse_args()
-        li = ['yixuechahua118', args['timestamp'], args['nonce']]
+        print(args['timestamp'])
+        print(args['signature'])
+        print(args['nonce'])
+        print(args['nonce'])
+
+        li = ['yixuechahua', args['timestamp'], args['nonce']]
+
         li.sort()
 
         #拼接字符串 不编码的话python会报错
