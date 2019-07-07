@@ -38,7 +38,7 @@ class WxApi(Resource):
         if args['signature'] == sign:
             print('yes!')
             #如果签名与微信的一致需返回echostr给微信
-            return int(args['echostr'])
+            return int(args['echostr']), 200
         else:
             print('no!')
             return api.abort(403, "sign not right")
@@ -68,7 +68,7 @@ class WxApi(Resource):
         # 将字典转换为xml字符串
         resp_xml_str = xmltodict.unparse(resp_dict)
         # 返回消息数据给微信服务器
-        return {'ok':'ok'}
+        return resp_xml_str, 200
             
     
 g_user = reqparse.RequestParser()
