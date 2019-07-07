@@ -53,3 +53,4 @@ tzlocal==1.5.1
 urllib3==1.25.3
 Werkzeug==0.15.4
 wrapt==1.11.2
+xmltodict==0.12.0

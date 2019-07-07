@@ -9,6 +9,7 @@ import json
 import requests
 import shortuuid
 import urllib
+import xmltodict
 from datetime import datetime, timedelta
 
 n_wechat = api.namespace('api/wechat', description='Authorization Operations')
@@ -19,6 +20,9 @@ g_wx.add_argument('signature', required=True, location='args')
 g_wx.add_argument('timestamp', required=True, location='args')
 g_wx.add_argument('nonce', required=True, location='args')
 g_wx.add_argument('echostr', location='args')
+
+p_wx = reqparse.RequestParser()
+p_wx.add_argument('data', required=True)
 
 @n_wechat.route('')
 class WxApi(Resource):
@@ -40,6 +44,14 @@ class WxApi(Resource):
         else:
             print('no!')
             return api.abort(403, "sign not right")
+
+    def post(self):
+        args = g_wx.parse_args()
+        print(request.data)
+        xml_dict = xmltodict.parse(args['data'])
+        xml_dict = xml_dict.get("xml")
+        print(args['data'])
+        print(xml_dict)
             
     
 g_user = reqparse.RequestParser()
