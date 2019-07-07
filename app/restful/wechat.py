@@ -207,7 +207,7 @@ class WxTokenApi(Resource):
         return getAccessToken()
 
 g_check = reqparse.RequestParser()
-g_check.add_argument('scene_str', required=True, location='args')
+g_check.add_argument('scene_str', location='args')
 @n_wechat.route('/check')
 class WxLoginApi(Resource):
     def get(self):
