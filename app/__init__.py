@@ -20,7 +20,7 @@ scheduler.init_app(app)
 scheduler.start()
 
 #Redis
-r_db = redis.Redis(host='localhost')
+r_db = redis.Redis(host='localhost',port=6379, db=0)
 
 # Restful
 api = Api(app, doc='/api/doc/', version='1.0', title='EMU(一目) API', description='')
