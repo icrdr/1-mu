@@ -57,7 +57,7 @@ class WxApi(Resource):
             print(xml_dict['Event'])
             print(xml_dict['EventKey'])
             print(xml_dict['FromUserName'])
-            r_db.set('123', 1)
+            r_db.set('123', 'true')
             option = Option.query.filter_by(name='wechat_access_token').first()
             url = "https://api.weixin.qq.com/cgi-bin/user/info"
             params = {
@@ -214,7 +214,7 @@ class WxLoginApi(Resource):
         args = g_check.parse_args()
         b = r_db.get(args['scene_id'])
         print(b)
-        if b == 1:
+        if b == 'true':
             return {'ok':'ok'}
         else:
             return {'no':'f!'}
@@ -231,7 +231,7 @@ class WxQrcodeApi(Resource):
                 "scene": {"scene_id": 123}
             }
         }
-        r_db.set('123', 0)
+        r_db.set('123', 'false')
         try:
             # json.dumps for json format. Otherwise, wechat will return error.
             data = requests.post(url, data=json.dumps(data)).json()
