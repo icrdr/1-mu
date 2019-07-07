@@ -1,6 +1,7 @@
 from flask import Flask, json
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
+from flask_apscheduler import APScheduler
 from flask_cors import CORS
 from flask_migrate import Migrate, init as db_init, migrate as db_migrate, upgrade as db_upgrade
 from config import config
@@ -13,6 +14,10 @@ app.config.from_object(config[os.environ.get('FLASK_ENV') or 'development'])
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+scheduler = APScheduler()
+scheduler.init_app(app)
+scheduler.start()
+
 # restful
 api = Api(app, doc='/api/doc/', version='1.0', title='EMU(一目) API', description='')
 
@@ -20,6 +25,7 @@ api = Api(app, doc='/api/doc/', version='1.0', title='EMU(一目) API', descript
 CORS(app)
 
 from . import view, restful, model
+
 
 @app.cli.command()
 def update():

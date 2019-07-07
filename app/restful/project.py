@@ -1,5 +1,5 @@
 from flask_restplus import Resource, reqparse, fields
-from .. import api, db
+from .. import api, db, scheduler
 from ..model import Project, Stage
 from ..utility import buildUrl
 from datetime import datetime
@@ -136,12 +136,14 @@ class PorjectsApi(Resource):
                     )
                     db.session.add(new_stage)
                 db.session.commit()
-            except:
+            except Exception as e:
+                print(e)
                 db.session.delete(new_project)
                 db.session.commit()
                 api.abort(400, "project can't create!")
             return new_project
-        except:
+        except Exception as e:
+            print(e)
             api.abort(400, "project can't create!")
 
 @n_porject.route('/<int:id>')
@@ -158,4 +160,34 @@ class PorjectApi(Resource):
             return {'ok': 'ok'},200
         else:
             api.abort(400, "project doesn't exist")
+
+n_test = api.namespace('api/test', description='projects operations')
+d_test = reqparse.RequestParser()
+d_test.add_argument('name', location='args', required=True,
+                       help="Login name for the user.")
+
+def task1(a,b):
+    print('sefsefsefsefsefsef')
+
+@n_test.route('')
+class TestsApi(Resource):
+    def post(self):
+        scheduler.add_job(
+            id='slkdjflksef', 
+            func=task1, 
+            args=(1, 2), 
+            trigger='date', 
+            run_date=datetime(2019, 7, 7, 6, 44, 0),
+            misfire_grace_time=3600, 
+            )
+        return {'message':'ok'}
+
+    def delete(self):
+        args = d_test.parse_args()
+        scheduler.delete_job(args['name'])
+        return {'message':'ok'}
+    
+
+# @n_test.route('/<int:id>')
+
 
