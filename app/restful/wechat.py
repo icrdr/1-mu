@@ -55,6 +55,7 @@ class WxApi(Resource):
         # print(xml_dict)
         # return {'ok':'ok'}
         xml_str = request.data
+        print(request.data)
         if not xml_str:
             return""
         # 对xml字符串进行解析
@@ -63,36 +64,20 @@ class WxApi(Resource):
 
         # 提取消息类型
         msg_type = xml_dict.get("MsgType")
-        if msg_type == "text":
-        # 表示发送的是文本消息
-        # 构造返回值，经由微信服务器回复给用户的消息内容
-            resp_dict = {
-                "xml": {
-                    "ToUserName": xml_dict.get("FromUserName"),
-                    "FromUserName": xml_dict.get("ToUserName"),
-                    "CreateTime": int(time.time()),
-                    "MsgType": "text",
-                    "Content": "you say:" + xml_dict.get("Content")
-                }
+        resp_dict = {
+            "xml": {
+                "ToUserName": xml_dict.get("FromUserName"),
+                "FromUserName": xml_dict.get("ToUserName"),
+                "CreateTime": int(time.time()),
+                "MsgType": "text",
+                "Content": "you say:" + xml_dict.get("Content")
             }
+        }
 
-            # 将字典转换为xml字符串
-            resp_xml_str = xmltodict.unparse(resp_dict)
-            # 返回消息数据给微信服务器
-            return resp_xml_str
-        else:
-            resp_dict = {
-                "xml": {
-                    "ToUserName": xml_dict.get("FromUserName"),
-                    "FromUserName": xml_dict.get("ToUserName"),
-                    "CreateTime": int(time.time()),
-                    "MsgType": "text",
-                    "Content": "Dear I Love you so much"
-                }
-            }
-            resp_xml_str = xmltodict.unparse(resp_dict)
-            # 返回消息数据给微信服务器
-            return resp_xml_str
+        # 将字典转换为xml字符串
+        resp_xml_str = xmltodict.unparse(resp_dict)
+        # 返回消息数据给微信服务器
+        return resp_xml_str
             
     
 g_user = reqparse.RequestParser()
