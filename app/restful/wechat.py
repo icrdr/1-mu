@@ -58,10 +58,14 @@ class WxApi(Resource):
 
             print(xml_dict['EventKey'])
             print(xml_dict['FromUserName'])
-            r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
+            if 'login' in xml_dict['EventKey']:
+                try:
+                    r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
+                except Exception as e:
+                    print(e)
             
             return Response('')
-            
+
         elif(xml_dict['MsgType'] == 'text'):
             # 提取消息类型
             # msg_type = xml_dict.get("MsgType")
@@ -70,16 +74,24 @@ class WxApi(Resource):
                     "ToUserName": xml_dict['FromUserName'],
                     "FromUserName": xml_dict['ToUserName'],
                     "CreateTime": int(time.time()),
-                    "MsgType": "text",
-                    "Content": "你刚才说的是：" + xml_dict['Content']
+                    "MsgType": "news",
+                    "ArticleCount":1,
+                    "Articles": {
+                        "item":{
+                            "Title":'标题',
+                            "Description":"描述",
+                            "PicUrl":"http://www.1-mu.net/upload/2019/07/08/rMeLwGCWrArb2FaPcTBoqJ_256.png",
+                            "Url":'http://beta.1-mu.net/'
+                        }
+                    }
                 }
             }
 
             # 将字典转换为xml字符串
             resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
             # 返回消息数据给微信服务器
-            # return Response(resp_xml_str, mimetype='text/xml')
-            return Response('')
+            return Response(resp_xml_str, mimetype='text/xml')
+            # return Response('')
 
 
 g_user = reqparse.RequestParser()
