@@ -203,7 +203,7 @@ class WxLoginApi(Resource):
 class WxMenuApi(Resource):
     def post(self):
         option = Option.query.filter_by(name='wechat_access_token').first()
-        url = " https://api.weixin.qq.com/cgi-bin/menu/create"
+        url = "https://api.weixin.qq.com/cgi-bin/menu/create"
         params = {
             "access_token": option.value,
         }
@@ -233,7 +233,7 @@ class WxMenuApi(Resource):
             ]
         }
         try:
-            res = requests.post(url, params=params, data=json.dumps(data))
+            res = requests.post(url, params=params, data=json.dumps(data, ensure_ascii=False))
             data = res.json()
             return data, 200
 
