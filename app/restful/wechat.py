@@ -249,8 +249,6 @@ class WxMenuApi(Resource):
             ]
         }
         try:
-            print(json.dumps(data).encode('utf-8'))
-            print(json.dumps(data, ensure_ascii=False))
             res= requests.post(url, params=params, data=json.dumps(data, ensure_ascii=False).encode('utf-8'))
             data= res.json()
             return data, 200
