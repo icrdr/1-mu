@@ -63,7 +63,7 @@ class WxApi(Resource):
                     r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
                 except Exception as e:
                     print(e)
-            
+
             return Response('')
 
         elif(xml_dict['MsgType'] == 'text'):
@@ -75,13 +75,13 @@ class WxApi(Resource):
                     "FromUserName": xml_dict['ToUserName'],
                     "CreateTime": int(time.time()),
                     "MsgType": "news",
-                    "ArticleCount":1,
+                    "ArticleCount": 1,
                     "Articles": {
-                        "item":{
-                            "Title":'标题',
-                            "Description":"描述",
-                            "PicUrl":"http://www.1-mu.net/upload/2019/07/08/rMeLwGCWrArb2FaPcTBoqJ_256.png",
-                            "Url":'http://beta.1-mu.net/'
+                        "item": {
+                            "Title": '标题',
+                            "Description": "描述",
+                            "PicUrl": "http://www.1-mu.net/upload/2019/07/08/rMeLwGCWrArb2FaPcTBoqJ_256.png",
+                            "Url": 'http://beta.1-mu.net/'
                         }
                     }
                 }
@@ -97,6 +97,7 @@ class WxApi(Resource):
 g_user = reqparse.RequestParser()
 g_user.add_argument('wxcode', required=True, location='args')
 # g_user.add_argument('wxtype', required=True, location='args')
+
 
 @n_wechat.route('/auth')
 class WxAuthApi(Resource):
@@ -198,6 +199,49 @@ class WxLoginApi(Resource):
             return api.abort(400, "not yet!")
 
 
+@n_wechat.route('/menu')
+class WxMenuApi(Resource):
+    def post(self):
+        option = Option.query.filter_by(name='wechat_access_token').first()
+        url = " https://api.weixin.qq.com/cgi-bin/menu/create"
+        params = {
+            "access_token": option.value,
+        }
+        data = {
+            "button": [
+                {
+                    "name": "一目学堂",
+                    "sub_button": [
+                        {
+                            "type": "view_limited",
+                            "name": "医学数字插画",
+                            "media_id": "F8EWugFQrW6deUZOeUy9atscsZY9vpmVyQD838Ir9FY"
+                        },
+                        {
+                            "type": "view_limited",
+                            "name": "3D培训",
+                            "media_id": "F8EWugFQrW6deUZOeUy9atscsZY9vpmVyQD838Ir9FY"
+                        },
+                        {
+                            "type": "view_limited",
+                            "name": "PPT培训",
+                            "media_id": "F8EWugFQrW6deUZOeUy9atscsZY9vpmVyQD838Ir9FY"
+                        }
+                    ]
+                }
+
+            ]
+        }
+        try:
+            res = requests.post(url, params=params, data=json.dumps(data))
+            data = res.json()
+            return data, 200
+
+        except Exception as e:
+            print(e)
+            return api.abort(400, "bad connection")
+
+
 @n_wechat.route('/qrcode')
 class WxQrcodeApi(Resource):
     def get(self):
@@ -251,6 +295,7 @@ def getAccessToken():
         print(e)
         return api.abort(400, "bad connection")
 
+
 def createUser(data):
     try:
         wx_user = WxUser.query.filter_by(unionid=data['unionid']).first()
@@ -301,4 +346,3 @@ def createUser(data):
     except Exception as e:
         print(e)
         return api.abort(400, "create user failed")
-
