@@ -82,8 +82,7 @@ class WxApi(Resource):
 
 g_user = reqparse.RequestParser()
 g_user.add_argument('wxcode', required=True, location='args')
-g_user.add_argument('wxtype', required=True, location='args')
-
+# g_user.add_argument('wxtype', required=True, location='args')
 
 @n_wechat.route('/auth')
 class WxAuthApi(Resource):
@@ -92,21 +91,23 @@ class WxAuthApi(Resource):
         args = g_user.parse_args()
         # step 1: get access code from client.
         url = 'https://api.weixin.qq.com/sns/oauth2/access_token'
-        appid = secret = ''
 
-        if args['wxtype'] == 'gz':
-            appid = app.config['WECHAT_GZ_APPID']
-            secret = app.config['WECHAT_GZ_APPSECRET']
-        elif args['wxtype'] == 'kf':
-            appid = app.config['WECHAT_KF_APPID']
-            secret = app.config['WECHAT_KF_APPSECRET']
+        # appid = secret = ''
+
+        # if args['wxtype'] == 'gz':
+        #     appid = app.config['WECHAT_GZ_APPID']
+        #     secret = app.config['WECHAT_GZ_APPSECRET']
+        # elif args['wxtype'] == 'kf':
+        #     appid = app.config['WECHAT_KF_APPID']
+        #     secret = app.config['WECHAT_KF_APPSECRET']
 
         params = {
             "grant_type": "authorization_code",
-            "appid": appid,
-            "secret": secret,
+            "appid": app.config['WECHAT_GZ_APPID'],
+            "secret": app.config['WECHAT_GZ_APPSECRET'],
             "code": args['wxcode']
         }
+
         try:  # step 2: get access_token from wechat serves.
             # data = requests.get(url, params=payload).json()
             data = requests.get(url, params=params).json()
@@ -121,7 +122,7 @@ class WxAuthApi(Resource):
                     res.encoding = 'utf-8'
                     data = res.json()
                     if 'unionid' in data:
-                        createUser(data)
+                        return createUser(data)
                     else:
                         return data, 400
                 except Exception as e:
@@ -172,7 +173,7 @@ class WxLoginApi(Resource):
                 res.encoding = 'utf-8'
                 data = res.json()
                 if 'unionid' in data:
-                    createUser(data)
+                    return createUser(data)
                 else:
                     return data, 400
 
@@ -180,7 +181,7 @@ class WxLoginApi(Resource):
                 print(e)
                 return api.abort(400, "bad connection")
         else:
-            return {'no': 'f!'}, 200
+            return api.abort(400, "not yet!")
 
 
 @n_wechat.route('/qrcode')
