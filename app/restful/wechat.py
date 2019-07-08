@@ -55,9 +55,8 @@ class WxApi(Resource):
         xml_dict = xml_dict['xml']
         print(xml_dict['MsgType'])
         if(xml_dict['MsgType'] == 'event'):
-
-            print(xml_dict['EventKey'])
-            print(xml_dict['FromUserName'])
+            print('event_key: '+xml_dict['EventKey'])
+            # print(xml_dict['FromUserName'])
             if 'login' in xml_dict['EventKey']:
                 try:
                     r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
@@ -67,31 +66,31 @@ class WxApi(Resource):
             return Response('')
 
         elif(xml_dict['MsgType'] == 'text'):
-            # 提取消息类型
-            # msg_type = xml_dict.get("MsgType")
-            resp_dict = {
-                "xml": {
-                    "ToUserName": xml_dict['FromUserName'],
-                    "FromUserName": xml_dict['ToUserName'],
-                    "CreateTime": int(time.time()),
-                    "MsgType": "news",
-                    "ArticleCount": 1,
-                    "Articles": {
-                        "item": {
-                            "Title": '标题',
-                            "Description": "描述",
-                            "PicUrl": "http://www.1-mu.net/upload/2019/07/08/rMeLwGCWrArb2FaPcTBoqJ_256.png",
-                            "Url": 'http://beta.1-mu.net/'
+            if '测试' in xml_dict['Content']:
+                resp_dict = {
+                    "xml": {
+                        "ToUserName": xml_dict['FromUserName'],
+                        "FromUserName": xml_dict['ToUserName'],
+                        "CreateTime": int(time.time()),
+                        "MsgType": "news",
+                        "ArticleCount": 1,
+                        "Articles": {
+                            "item": {
+                                "Title": '标题',
+                                "Description": "描述",
+                                "PicUrl": "http://www.1-mu.net/upload/2019/07/08/rMeLwGCWrArb2FaPcTBoqJ_256.png",
+                                "Url": 'http://beta.1-mu.net/'
+                            }
                         }
                     }
                 }
-            }
 
-            # 将字典转换为xml字符串
-            resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
-            # 返回消息数据给微信服务器
-            return Response(resp_xml_str, mimetype='text/xml')
-            # return Response('')
+                # 将字典转换为xml字符串
+                resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
+                # 返回消息数据给微信服务器
+                return Response(resp_xml_str, mimetype='text/xml')
+            else:
+                return Response('')
 
 
 g_user = reqparse.RequestParser()
