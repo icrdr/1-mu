@@ -78,7 +78,7 @@ class WxApi(Resource):
             resp_xml_str = xmltodict.unparse(resp_dict, encoding='utf-8')
             # 返回消息数据给微信服务器
             # return Response(resp_xml_str, mimetype='text/xml')
-            return 'success'
+            return Response('')
 
 
 g_user = reqparse.RequestParser()
