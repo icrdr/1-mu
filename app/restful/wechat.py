@@ -215,7 +215,7 @@ class WxMenuApi(Resource):
                         {
                             "type": "view_limited",
                             "name": "医学数字插画",
-                            "media_id": "F8EWugFQrW6deUZOeUy9atscsZY9vpmVyQD838Ir9FY"
+                            "media_id": "F8EWugFQrW6deUZOeUy9arpbtH8fQOqmBE4q_DHF3rc"
                         },
                         {
                             "type": "view_limited",
@@ -225,18 +225,34 @@ class WxMenuApi(Resource):
                         {
                             "type": "view_limited",
                             "name": "PPT培训",
-                            "media_id": "F8EWugFQrW6deUZOeUy9atscsZY9vpmVyQD838Ir9FY"
+                            "media_id": "F8EWugFQrW6deUZOeUy9anBxSlYBXC7Y0QbD466YAPY"
+                        }
+                    ]
+                },
+                {
+                 "type": "miniprogram",
+                 "name": "一目社区",
+                 "url": "http://www.1-mu.net",
+                 "appid": "wx9c6611278d5fe9cf",
+                 "pagepath": "pages/index/index"
+                },
+                {
+                    "name": "一目创造",
+                    "sub_button": [
+                        {
+                            "type": "view_limited",
+                            "name": "关于我们",
+                            "media_id": "F8EWugFQrW6deUZOeUy9avhRYOffX2gcSJFflevky80"
                         }
                     ]
                 }
-
             ]
         }
         try:
             print(json.dumps(data).encode('utf-8'))
             print(json.dumps(data, ensure_ascii=False))
-            res = requests.post(url, params=params, data=json.dumps(data, ensure_ascii=False).encode('utf-8'))
-            data = res.json()
+            res= requests.post(url, params=params, data=json.dumps(data, ensure_ascii=False).encode('utf-8'))
+            data= res.json()
             return data, 200
 
         except Exception as e:
@@ -247,10 +263,10 @@ class WxMenuApi(Resource):
 @n_wechat.route('/qrcode')
 class WxQrcodeApi(Resource):
     def get(self):
-        scene_str = 'login'+str(shortuuid.uuid())
-        option = Option.query.filter_by(name='wechat_access_token').first()
-        url = 'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s' % option.value
-        data = {
+        scene_str= 'login'+str(shortuuid.uuid())
+        option= Option.query.filter_by(name='wechat_access_token').first()
+        url= 'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s' % option.value
+        data= {
             "expire_seconds": 604800,
             "action_name": "QR_STR_SCENE",
             "action_info": {
@@ -260,7 +276,7 @@ class WxQrcodeApi(Resource):
         r_db.set(scene_str, 'None')
         try:
             # json.dumps for json format. Otherwise, wechat will return error.
-            data = requests.post(url, data=json.dumps(data)).json()
+            data= requests.post(url, data=json.dumps(data)).json()
             if 'ticket' in data:
                 return {'ticket': data['ticket'], 'scene_str': scene_str}, 200
             else:
@@ -271,19 +287,19 @@ class WxQrcodeApi(Resource):
 
 
 def getAccessToken():
-    url = 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s' % (
+    url= 'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=%s&secret=%s' % (
         app.config['WECHAT_GZ_APPID'],
         app.config['WECHAT_GZ_APPSECRET']
     )
     try:
-        data = requests.get(url).json()
+        data= requests.get(url).json()
         if 'access_token' in data:
             print(data['access_token'])
-            option = Option.query.filter_by(name='wechat_access_token').first()
+            option= Option.query.filter_by(name='wechat_access_token').first()
             if option:
-                option.value = data['access_token']
+                option.value= data['access_token']
             else:
-                new_option = Option(
+                new_option= Option(
                     name='wechat_access_token',
                     value=data['access_token']
                 )
@@ -300,20 +316,20 @@ def getAccessToken():
 
 def createUser(data):
     try:
-        wx_user = WxUser.query.filter_by(unionid=data['unionid']).first()
+        wx_user= WxUser.query.filter_by(unionid=data['unionid']).first()
         # check if the wechat unionid is already registed on our serves
         if wx_user:  # if so, update his info
-            wx_user.openid = data['openid'],
-            wx_user.nickname = data['nickname'],
-            wx_user.sex = data['sex'],
-            wx_user.language = data['language'],
-            wx_user.city = data['city'],
-            wx_user.province = data['province'],
-            wx_user.country = data['country'],
-            wx_user.headimg_url = data['headimgurl'],
-            wx_user.unionid = data['unionid']
+            wx_user.openid= data['openid'],
+            wx_user.nickname= data['nickname'],
+            wx_user.sex= data['sex'],
+            wx_user.language= data['language'],
+            wx_user.city= data['city'],
+            wx_user.province= data['province'],
+            wx_user.country= data['country'],
+            wx_user.headimg_url= data['headimgurl'],
+            wx_user.unionid= data['unionid']
         else:  # otherwise, create a new one
-            new_wx_user = WxUser(
+            new_wx_user= WxUser(
                 openid=data['openid'],
                 nickname=data['nickname'],
                 sex=data['sex'],
@@ -327,7 +343,7 @@ def createUser(data):
             db.session.add(new_wx_user)
 
             # create a new account on our serves and bind it to the wechat account.
-            new_user = User(
+            new_user= User(
                 login=str(shortuuid.uuid()),
                 name=data['nickname'],
                 password=generate_password_hash(
@@ -335,11 +351,11 @@ def createUser(data):
                 wx_user=new_wx_user
             )
             db.session.add(new_user)
-            wx_user = new_wx_user
+            wx_user= new_wx_user
 
         db.session.commit()
         # generate a jwt based on user id
-        token = jwt.encode({'id': wx_user.bind_user_id, 'exp': datetime.utcnow(
+        token= jwt.encode({'id': wx_user.bind_user_id, 'exp': datetime.utcnow(
         )+timedelta(hours=24)}, app.config['SECRET_KEY'])
         return {
             'token': token.decode('UTF-8'),
