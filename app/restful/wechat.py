@@ -160,7 +160,7 @@ class WxLoginApi(Resource):
     def get(self):
         args = g_check.parse_args()
         openid = r_db.get(args['scene_str']).decode('UTF-8')
-        print(openid)
+        # print(openid)
         if openid != 'None':
             option = Option.query.filter_by(name='wechat_access_token').first()
             url = "https://api.weixin.qq.com/cgi-bin/user/info"
