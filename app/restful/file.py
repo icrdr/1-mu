@@ -159,13 +159,14 @@ class UploadApi(Resource):
                     if format in ['png','jpg','psd','jpeg','gif','bmp','tga','tiff','tif']:
                         im_path = os.path.join(path, filename)
                         im = Image.open(im_path)
+                        im = im.convert('RGB')
                         for size in app.config['THUMBNAIL_SIZE']:
                             im.thumbnail((size, size))
-                            im.save(os.path.join(path, random_name) + "_%s.png"%str(size), "PNG")
+                            im.save(os.path.join(path, random_name) + "_%s.jpg"%str(size), "JPEG")
 
                             new_preview = Preview(
                                 bind_file_id = new_file.id,
-                                url = str(os.path.join(year, month, day , random_name+"_%s.png"%str(size))).replace('\\', '/'),
+                                url = str(os.path.join(year, month, day , random_name+"_%s.jpg"%str(size))).replace('\\', '/'),
                                 size = size
                             )
                             db.session.add(new_preview)
