@@ -60,7 +60,8 @@ class WxApi(Resource):
             print(xml_dict['FromUserName'])
             r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
             
-            # return api.abort(400, "bad connection")
+            return Response('')
+            
         elif(xml_dict['MsgType'] == 'text'):
             # 提取消息类型
             # msg_type = xml_dict.get("MsgType")
