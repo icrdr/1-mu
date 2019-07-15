@@ -1,1 +1,1 @@
-from . import user, post, auth, file, download, project, wechat
+from . import users, posts, auth, files, download, projects, wechat

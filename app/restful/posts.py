@@ -2,7 +2,7 @@ from flask_restplus import Resource, reqparse, fields
 from .. import api, db
 from ..model import Post, User, Tag
 
-n_post = api.namespace('api/post', description='posts operations')
+n_post = api.namespace('api/posts', description='posts operations')
 
 m_tag = api.model('tag', {
     'id': fields.Integer,

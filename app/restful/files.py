@@ -7,23 +7,16 @@ from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
 from datetime import datetime
 import os, shortuuid
-from ..utility import buildUrl
+from ..utility import buildUrl, getAvatar
 from psd_tools import PSDImage
 from PIL import Image
 
-ns_file = api.namespace('api/file', description='upload operations')
-
-m_wx_user = api.model('user', {
-    'id': fields.Integer(description="Unique identifier for the user."),
-    'nickname': fields.String(description="Display name for the user."),
-    'headimg_url': fields.String(description="The avatar url for the user."),
-})
+ns_file = api.namespace('api/files', description='upload operations')
 
 m_user = api.model('user', {
     'id': fields.Integer,
     'name': fields.String,
-    'avatar_url': fields.String(attribute=lambda x: buildUrl(x.avatar_url), description="The avatar url for the user."),
-    'wx_user': fields.Nested(m_wx_user),
+    'avatar_url': fields.String(attribute=lambda x: getAvatar(x), description="The avatar url for the user."),
 })
 
 m_preview = api.model('preview', {
@@ -155,8 +148,8 @@ class UploadApi(Resource):
                 db.session.add(new_file)
                 db.session.commit()
 
-                try:
-                    if format in ['png','jpg','psd','jpeg','gif','bmp','tga','tiff','tif']:
+                if format in ['png','jpg','psd','jpeg','gif','bmp','tga','tiff','tif']:
+                    try:
                         im_path = os.path.join(path, filename)
                         im = Image.open(im_path)
                         im = im.convert('RGB')
@@ -170,11 +163,11 @@ class UploadApi(Resource):
                                 size = size
                             )
                             db.session.add(new_preview)
-                        db.session.commit()
-                except Exception as e:
-                    print(e)
-                    api.abort(400, "fail to gererate thumbnail!")
+                    except Exception as e:
+                        print(e)
+                        api.abort(400, "fail to gererate thumbnail!")
 
+                db.session.commit()
                 return new_file
             except Exception as e:
                 print(e)

@@ -113,8 +113,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-upload/
-download/
+uploads/
+downloads/
 migrations/
 pylintrc
 .vscode/
