@@ -150,16 +150,12 @@ class WxAuthApi(Resource):
 @n_wechat.route('/token')
 class WxTokenApi(Resource):
     def post(self):
-        try:
-            scheduler.delete_job('update_wechat_access_token')
-        except Exception as e:
-            print(e)
-
         scheduler.add_job(
             id='update_wechat_access_token',
             func=getAccessToken,
             trigger='interval',
-            minutes=110
+            minutes=110,
+            replace_existing=True
         )
 
         return getAccessToken()
@@ -262,8 +258,11 @@ class WxMenuApi(Resource):
 @n_wechat.route('/qrcode')
 class WxQrcodeApi(Resource):
     def get(self):
-        scene_str = 'login'+str(shortuuid.uuid())
+        scene_str = 'login_'+str(shortuuid.uuid())
         option = Option.query.filter_by(name='wechat_access_token').first()
+        if not option:
+            getAccessToken()
+
         url = 'https://api.weixin.qq.com/cgi-bin/qrcode/create?access_token=%s' % option.value
         data = {
             "expire_seconds": 604800,

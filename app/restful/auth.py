@@ -73,6 +73,7 @@ class AuthApi(Resource):
 n_me = api.namespace('api/me', description='Me')
 g_user = reqparse.RequestParser()
 g_user.add_argument('token', location='cookies')
+
 @n_me.route('')
 class MeApi(Resource):
     @api.marshal_with(m_user)
@@ -80,7 +81,9 @@ class MeApi(Resource):
     def get(self):
         args = g_user.parse_args()
         try:
+            print(args['token'])
             data = jwt.decode(args['token'], app.config['SECRET_KEY'])
+            print(data)
         except Exception as e:
             print(e)
             return api.abort(401, "Bad token.")
