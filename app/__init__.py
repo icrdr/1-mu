@@ -1,4 +1,3 @@
-from .restful.wechat import getAccessToken
 from flask import Flask, json
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
