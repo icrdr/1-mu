@@ -1,3 +1,4 @@
+from .restful.wechat import getAccessToken
 from flask import Flask, json
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
@@ -8,7 +9,7 @@ import os
 import redis
 from pytz import utc
 from apscheduler.schedulers.background import BackgroundScheduler
-
+from datetime import datetime
 app = Flask(__name__)
 app.config.from_object(config[os.environ.get('FLASK_ENV')])
 
@@ -21,11 +22,12 @@ scheduler = BackgroundScheduler()
 scheduler.configure(jobstores=app.config['SCHEDULER_JOBSTORES'], timezone=utc)
 scheduler.start()
 
-#Redis
-r_db = redis.Redis(host='localhost',port=6379, db=0)
+# Redis
+r_db = redis.Redis(host='localhost', port=6379, db=0)
 
 # Restful
-api = Api(app, doc='/api/doc/', version='1.0', title='EMU(一目) API', description='')
+api = Api(app, doc='/api/doc/', version='1.0',
+          title='EMU(一目) API', description='')
 
 # support CORS https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 CORS(app)
@@ -47,11 +49,12 @@ def update():
 def init():
     # create tables
     db.create_all()
-    
+
     # create user roles
     model.Role.insert_roles()
     model.User.create_admin()
     db_init()
+
 
 @app.cli.command()
 def doc():
@@ -59,7 +62,6 @@ def doc():
         urlvars = False  # Build query strings in URLs
         swagger = True  # Export Swagger specifications
         data = api.as_postman(urlvars=urlvars, swagger=swagger)
-        with open("api.json",'w') as file: # Use file to refer to the file object
+        with open("api.json", 'w') as file:  # Use file to refer to the file object
             print(json.dumps(data))
             file.write(json.dumps(data))
-        
