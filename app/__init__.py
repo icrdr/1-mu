@@ -8,7 +8,7 @@ import os
 import redis
 from pytz import utc
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime
+
 app = Flask(__name__)
 app.config.from_object(config[os.environ.get('FLASK_ENV')])
 
