@@ -2,6 +2,8 @@ import os
 from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 
 class Config:
+    ADMIN_LOGIN = 'admin'
+    ADMIN_PASS = 'admin'
     DOMAIN_URL = 'http://domain.com'
     DATABASE_URI='mysql://username:password@server/db'
 
@@ -46,7 +48,6 @@ class Config:
     SCHEDULER_JOBSTORES = {
         'default': SQLAlchemyJobStore(url = DATABASE_URI)
     }
-    SCHEDULER_API_ENABLED = True
 
 class DevelopmentConfig(Config):
     pass
