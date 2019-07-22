@@ -26,8 +26,7 @@ scheduler.start()
 r_db = redis.Redis(host='localhost', port=6379, db=0)
 
 # Restful
-api = Api(app, doc='/api/doc/', version='1.0',
-          title='EMU(一目) API', description='')
+api = Api(app, doc='/api/doc/', version='1.0', title='EMU(一目) API', description='')
 
 # support CORS https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 CORS(app)
