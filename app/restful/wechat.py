@@ -362,7 +362,7 @@ def createUser(data):
         db.session.commit()
         # generate a jwt based on user id
         token = jwt.encode({'id': wx_user.bind_user_id, 'exp': datetime.utcnow(
-        )+timedelta(hours=24)}, app.config['SECRET_KEY'])
+        )+timedelta(days=24)}, app.config['SECRET_KEY'])
         return {
             'token': token.decode('UTF-8'),
             'wx_info': data

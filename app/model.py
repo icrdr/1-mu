@@ -35,6 +35,7 @@ user_group = db.Table('user_groups',
                       db.Column('user_id', db.Integer,
                                 db.ForeignKey('users.id'))
                       )
+
 post_file = db.Table('post_files',
                      db.Column('file_id', db.Integer,
                                db.ForeignKey('files.id')),
@@ -42,8 +43,22 @@ post_file = db.Table('post_files',
                                db.ForeignKey('posts.id')),
                      )
 
+project_creator = db.Table('project_creators',
+                        db.Column('creator_user_id', db.Integer,
+                                db.ForeignKey('users.id')),
+                      db.Column('project_id', db.Integer,
+                                db.ForeignKey('projects.id')),
+                      )
+
 phase_file = db.Table('phase_files',
                       db.Column('file_id', db.Integer,
+                                db.ForeignKey('files.id')),
+                      db.Column('phase_id', db.Integer,
+                                db.ForeignKey('phases.id')),
+                      )
+
+phase_upload_file = db.Table('phase_upload_files',
+                      db.Column('upload_file_id', db.Integer,
                                 db.ForeignKey('files.id')),
                       db.Column('phase_id', db.Integer,
                                 db.ForeignKey('phases.id')),
@@ -223,11 +238,13 @@ class Post(db.Model):
     author_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     # one-many: Post.category-Category.posts
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
+    show_comment = db.Column(db.Boolean, default=True)
     allow_comment = db.Column(db.Boolean, default=True)
     anonymity = db.Column(db.Boolean, default=False)
     status = db.Column(db.Enum('publish', 'draft', 'discard'),
                        server_default=("draft"))
-    public_date = db.Column(db.DateTime, default=datetime.utcnow)
+    post_date = db.Column(db.DateTime, default=datetime.utcnow)
+    publish_date = db.Column(db.DateTime)
 
     cover_img_url = db.Column(db.String(512))
 
@@ -291,7 +308,7 @@ class Comment(db.Model):
     anonymity = db.Column(db.Boolean, default=False)
     status = db.Column(db.Enum('publish', 'discard'),
                        server_default=("publish"))
-    public_date = db.Column(db.DateTime, default=datetime.utcnow)
+    post_date = db.Column(db.DateTime, default=datetime.utcnow)
 
     # mnay-many in same table: Comment.parent_comment-Comment.children_comments
     children_comments = db.relationship('Comment', backref=db.backref(
@@ -307,20 +324,21 @@ class Comment(db.Model):
 class Project(db.Model):
     __tablename__ = 'projects'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64))
+    title = db.Column(db.String(256))
     design = db.Column(db.Text)
     # one-many: Post.client-User.projects_as_client
     client_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    # one-many: project.creator-User.projects_as_creator
-    creator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    # many-many: User.projects-Project.creators
+    creators = db.relationship('User', secondary=project_creator,
+                            lazy='subquery', backref=db.backref('projects_as_creator', lazy=True))
 
-    public_date = db.Column(db.DateTime)
+    status = db.Column(db.Enum('await', 'progress', 'delay', 'pending',
+                               'abnormal', 'modify', 'finish', 'discard'), server_default=("await"))
+    post_date = db.Column(db.DateTime, default=datetime.utcnow)
     start_date = db.Column(db.DateTime)
-    status = db.Column(db.Enum('publish', 'draft', 'discard'),
-                       server_default=("draft"))
-    # one-many: project.creator-User.projects_as_creator
-    creator = db.relationship('User', foreign_keys=creator_user_id, backref=db.backref(
-        'projects_as_creator', lazy=True))
+    finish_date = db.Column(db.DateTime)
+    last_pause_date = db.Column(db.DateTime)
+
     # one-many: project.client-User.projects_as_client
     client = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
         'projects_as_client', lazy=True))
@@ -328,12 +346,13 @@ class Project(db.Model):
     stages = db.relationship(
         'Stage', backref=db.backref('parent_project', lazy=True))
     current_stage_index = db.Column(db.Integer, default=0)
+
     # one-many: Propose.parent_project-Project.Proposes
     proposes = db.relationship(
         'Propose', backref=db.backref('parent_project', lazy=True))
 
     def __repr__(self):
-        return '<Project %r>' % self.name
+        return '<Project %r>' % self.title
 
 
 class Stage(db.Model):
@@ -359,14 +378,22 @@ class Phase(db.Model):
     parent_stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
     days_need = db.Column(db.Integer)
 
-    status = db.Column(db.Enum('await', 'progress', 'delay', 'pending',
-                               'abnormal', 'modify', 'finish', 'discard'), server_default=("await"))
-
-    creator_post = db.Column(db.Text)
-    post_date = db.Column(db.DateTime)
-
+    creator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    creator = db.relationship('User', foreign_keys=creator_user_id, backref=db.backref(
+        'Phases_as_creator', lazy=True))
+    creator_upload = db.Column(db.Text)
+    upload_date = db.Column(db.DateTime)
+    
+    client_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    client = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
+        'Phases_as_client', lazy=True))
     client_feedback = db.Column(db.Text)
     feedback_date = db.Column(db.DateTime)
+    
+
+    # many-many: File.phases-Phase.files
+    upload_files = db.relationship('File', secondary=phase_upload_file,
+                            lazy='subquery', backref=db.backref('phases_as_upload', lazy=True))
 
     # many-many: File.phases-Phase.files
     files = db.relationship('File', secondary=phase_file,
@@ -395,9 +422,11 @@ class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     # one-many: File.uploader-User.files
     uploader_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    author=db.Column(db.String(64))
     name = db.Column(db.String(64))
     format = db.Column(db.String(16))
     url = db.Column(db.String(512), unique=True)
+    from_url = db.Column(db.String(512))
     upload_date = db.Column(db.DateTime, default=datetime.utcnow)
     # one-many: Preview.file-File.previews
     previews = db.relationship(

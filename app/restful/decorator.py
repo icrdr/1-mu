@@ -18,25 +18,25 @@ def permission_required(permission=None):
         def decorated_function(*args, **kwargs):
             # token = g_user.parse_args()['Authorization'].split(" ")[1]
             args = g_user.parse_args()
-            if args['token']:
-                try:
-                    data = jwt.decode(args['token'], app.config['SECRET_KEY'])
-                except Exception as e:
-                    print(e)
-                    return api.abort(400, "bad token")
-            else:
-                return api.abort(400, "no token")
+            if not args['token']:
+                return api.abort(401, "No token was given.")
+
+            try:
+                data = jwt.decode(args['token'], app.config['SECRET_KEY'])
+            except Exception as e:
+                print(e)
+                return api.abort(401, "Bad token.")
 
             user = User.query.get(data['id'])
             if user:
                 g.current_user = User.query.get(data['id'])
                 g.token_used = True
             else:
-                return api.abort(400, "user not exist")
+                return api.abort(401, "User is not exist")
             
             if permission:
                 if not g.current_user.can(permission):
-                    api.abort(400, "Insufficient permissions")
+                    api.abort(403, "More privileges required.")
     
             return f(*args, **kwargs)
         return decorated_function

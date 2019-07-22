@@ -55,7 +55,7 @@ g_user.add_argument('exclude', location='args', action='split',
 g_user.add_argument('order', location='args', default='asc',
                     choices=['asc', 'desc'],
                     help="Order sort attribute ascending or descending.")
-g_user.add_argument('orderby', location='args', default='id',
+g_user.add_argument('order_by', location='args', default='id',
                     choices=['id', 'name', 'reg_date'],
                     help="Sort collection by object attribute.")
 g_user.add_argument('page', location='args', type=int, default=1,
@@ -108,17 +108,17 @@ class UsersApi(Resource):
         elif args['exclude']:
             query = query.filter(User.id.notin_(args['exclude']))
 
-        if args['orderby'] == 'id':
+        if args['order_by'] == 'id':
             if args['order'] == 'asc':
                 query = query.order_by(User.id.asc())
             else:
                 query = query.order_by(User.id.desc())
-        elif args['orderby'] == 'name':
+        elif args['order_by'] == 'name':
             if args['order'] == 'asc':
                 query = query.order_by(User.name.asc())
             else:
                 query = query.order_by(User.name.desc())
-        elif args['orderby'] == 'reg_date':
+        elif args['order_by'] == 'reg_date':
             if args['order'] == 'asc':
                 query = query.order_by(User.reg_date.asc())
             else:

@@ -53,4 +53,25 @@ location /upload {
     alias /var/www/1-mu/upload/;
 }
 ```
-https://open.weixin.qq.com/connect/qrconnect?appid=wx9c88c3320f959b7c&redirect_uri=http%3A//www.1-mu.net&response_type=code&scope=snsapi_login&state=STATE#wechat_redirect
+
+
+# support emoji store
+### create database
+CREATE DATABASE database_name CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+sqlalchemy mysql url setting
+mysql+mysqlconnector://{username}:{password}@{hostname}/{databasename}?charset=utf8mb4
+
+edit /etc/mysql/my.cnf
+```
+[client]
+default-character-set = utf8mb4
+[mysql]
+default-character-set = utf8mb4
+[mysqld]
+character-set-client-handshake = FALSE
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+init_connect='SET NAMES utf8mb4'
+```
+`etc/init.d/mysql` restart

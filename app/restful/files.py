@@ -30,7 +30,7 @@ m_file = api.model('file', {
     'url': fields.String(attribute=lambda x: buildUrl(x.url), description="The avatar url for the user."),
     'format': fields.String(description="Registration date for the user."),
     'uploader': fields.Nested(m_user),
-    'previews': fields.Nested(m_preview),
+    'previews': fields.List(fields.Nested(m_preview)),
     'upload_date': fields.String(description="Registration date for the user.")
 })
 
@@ -48,7 +48,7 @@ g_file.add_argument('exclude', location='args', action='split',
 g_file.add_argument('order', location='args', default='asc',
                     choices=['asc', 'desc'],
                     help="Order sort attribute ascending or descending.")
-g_file.add_argument('orderby', location='args', default='id',
+g_file.add_argument('order_by', location='args', default='id',
                     choices=['id', 'name', 'reg_date'],
                     help="Sort collection by object attribute.")
 g_file.add_argument('page', location='args', type=int, default=1,
@@ -57,8 +57,6 @@ g_file.add_argument('pre_page', location='args', type=int, default=10,
                     help="Maximum number of items to be returned in result set.")
 
 p_file = reqparse.RequestParser()
-p_file.add_argument('stage_id', location='args', type=int,
-                    help="Maximum number of items to be returned in result set.")
 p_file.add_argument('file', required=True, type=datastructures.FileStorage, location='files')
 
 
@@ -83,17 +81,17 @@ class UploadApi(Resource):
         elif args['exclude']:
             query = query.filter(File.id.notin_(args['exclude']))
 
-        if args['orderby'] == 'id':
+        if args['order_by'] == 'id':
             if args['order'] == 'asc':
                 query = query.order_by(File.id.asc())
             else:
                 query = query.order_by(File.id.desc())
-        elif args['orderby'] == 'name':
+        elif args['order_by'] == 'name':
             if args['order'] == 'asc':
                 query = query.order_by(File.name.asc())
             else:
                 query = query.order_by(File.name.desc())
-        elif args['orderby'] == 'reg_date':
+        elif args['order_by'] == 'reg_date':
             if args['order'] == 'asc':
                 query = query.order_by(File.upload_date.asc())
             else:
@@ -112,9 +110,6 @@ class UploadApi(Resource):
     @permission_required(PERMISSIONS['UPLOAD'])
     def post(self):
         args = p_file.parse_args()
-        stage = None
-        if args['stage_id']:
-            stage = Stage.query.get(args['stage_id'])
 
         file = args['file']
         if allowed_file(file.filename):
@@ -135,43 +130,44 @@ class UploadApi(Resource):
                     os.makedirs(path)
 
                 file.save(os.path.join(path, filename))
-                
+                uploader_id = 1
+                if 'current_user' in g:
+                    uploader_id = g.current_user.id
+
                 new_file = File(
-                    uploader_user_id = g.current_user.id,
+                    uploader_user_id = uploader_id,
                     name = rawname,
                     format = format,
                     url = str(os.path.join(year, month, day , filename)).replace('\\', '/')
                 )
-                
-                if stage:new_file.stages.append(stage)
 
                 db.session.add(new_file)
                 db.session.commit()
-
-                if format in ['png','jpg','psd','jpeg','gif','bmp','tga','tiff','tif']:
-                    try:
-                        im_path = os.path.join(path, filename)
-                        im = Image.open(im_path)
-                        im = im.convert('RGB')
-                        for size in app.config['THUMBNAIL_SIZE']:
-                            im.thumbnail((size, size))
-                            im.save(os.path.join(path, random_name) + "_%s.jpg"%str(size), "JPEG")
-
-                            new_preview = Preview(
-                                bind_file_id = new_file.id,
-                                url = str(os.path.join(year, month, day , random_name+"_%s.jpg"%str(size))).replace('\\', '/'),
-                                size = size
-                            )
-                            db.session.add(new_preview)
-                    except Exception as e:
-                        print(e)
-                        api.abort(400, "fail to gererate thumbnail!")
-
-                db.session.commit()
-                return new_file
             except Exception as e:
                 print(e)
-                api.abort(400, "upload failure!")
+                api.abort(500, '[Sever Error]: '+ str(e))
+
+            if format in ['png','jpg','psd','jpeg','gif','bmp','tga','tiff','tif']:
+                try:
+                    im_path = os.path.join(path, filename)
+                    im = Image.open(im_path)
+                    im = im.convert('RGB')
+                    for size in app.config['THUMBNAIL_SIZE']:
+                        im.thumbnail((size, size))
+                        im.save(os.path.join(path, random_name) + "_%s.jpg"%str(size), "JPEG")
+
+                        new_preview = Preview(
+                            bind_file_id = new_file.id,
+                            url = str(os.path.join(year, month, day , random_name+"_%s.jpg"%str(size))).replace('\\', '/'),
+                            size = size
+                        )
+                        db.session.add(new_preview)
+                except Exception as e:
+                    print(e)
+                    # api.abort(500, '[Sever Error]: '+ str(e))
+                    
+                db.session.commit()
+            return new_file, 200
         else:
             api.abort(400, "file format not allowed!")
 
