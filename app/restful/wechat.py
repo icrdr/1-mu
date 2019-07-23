@@ -192,7 +192,7 @@ class WxLoginApi(Resource):
                 print(e)
                 return api.abort(400, "bad connection")
         else:
-            return api.abort(200, "not yet!")
+            return {'message': 'Not yet'}, 200
 
 
 @n_wechat.route('/menu')
