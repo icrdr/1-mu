@@ -71,6 +71,7 @@ m_projects = api.model('projects', {
 g_project = reqparse.RequestParser()
 g_project.add_argument('creator_id', location='args', action='split')
 g_project.add_argument('client_id', location='args', action='split')
+g_project.add_argument('status', location='args', action='split')
 g_project.add_argument('include', location='args', action='split')
 g_project.add_argument('exclude', location='args', action='split')
 g_project.add_argument('page', location='args', type=int, default=1)
@@ -104,10 +105,12 @@ class PorjectsApi(Resource):
         args = g_project.parse_args()
         query = Project.query
         if args['creator_id']:
-            query = query.filter(
-                Project.creator_user_id.in_(args['creator_id']))
+            query = query.join(Project.creators).filter(User.id.in_(args['creator_id']))
         if args['client_id']:
             query = query.filter(Project.client_user_id.in_(args['client_id']))
+
+        if args['status']:
+            query = query.filter(Project.status.in_(args['status']))
 
         if args['include']:
             if args['exclude']:
@@ -144,7 +147,7 @@ class PorjectsApi(Resource):
             }
             return marshal(output, m_projects, skip_none=True), 200
         else:
-            api.abort(404, "projects doesn't exist")
+            api.abort(400, "projects doesn't exist")
 
     @api.marshal_with(m_project)
     @api.expect(p_project)
@@ -169,6 +172,7 @@ class PorjectsApi(Resource):
                 design=args['design']
             )
             db.session.add(new_project)
+            new_project.status='await'
             for creator_id in args['creators']:
                 creator = User.query.get(creator_id)
                 new_project.creators.append(creator)
@@ -197,7 +201,7 @@ class PorjectApi(Resource):
     @api.marshal_with(m_project)
     def get(self, id):
         if not Project.query.get(id):
-            return api.abort(404, "Project is not exist.")
+            return api.abort(400, "Project is not exist.")
         return Project.query.get(id), 200
     
     @api.marshal_with(m_project)
@@ -206,7 +210,7 @@ class PorjectApi(Resource):
     def put(self, id):
         args = u_project.parse_args()
         if not Project.query.get(id):
-            return api.abort(404, "Project is not exist.")
+            return api.abort(400, "Project is not exist.")
         project = Project.query.get(id)
         if args['client_id']:
             if not User.query.get(args['client_id']):
@@ -263,7 +267,7 @@ class PorjectApi(Resource):
                 # current phase update
                 project.status = 'modify'
                 current_phase.feedback_date = datetime.utcnow()
-
+                current_phase.client_user_id = g.current_user.id
                 # craete new phase in current stage
                 new_phase = Phase(
                     parent_stage=current_stage,
@@ -277,12 +281,14 @@ class PorjectApi(Resource):
                 # current phase update
                 project.status = 'finish'
                 current_phase.feedback_date = datetime.utcnow()
+                current_phase.client_user_id = g.current_user.id
                 nextStageStart(project)
 
             elif args['action'] == 'upload':
                 # current phase update
                 project.status = 'pending'
                 current_phase.upload_date = datetime.utcnow()
+                current_phase.creator_user_id = g.current_user.id
 
                 # stop the delay counter
                 removeDelayCounter(current_stage.id)
@@ -326,7 +332,6 @@ class PorjectApi(Resource):
                 current_phase.client_feedback = args['feedback']
 
             if args['upload_files']!=None:
-                print(args['upload_files'])
                 current_phase.upload_files=[]
                 for upload_file in args['upload_files']:
                     current_phase.upload_files.append(
@@ -344,7 +349,7 @@ class PorjectApi(Resource):
     @admin_required
     def delete(self, id):
         if not Project.query.get(id):
-            return api.abort(404, "Project is not exist.")
+            return api.abort(400, "Project is not exist.")
 
         project = Project.query.get(id)
         stages = project.stages

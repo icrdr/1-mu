@@ -332,8 +332,8 @@ class Project(db.Model):
     creators = db.relationship('User', secondary=project_creator,
                             lazy='subquery', backref=db.backref('projects_as_creator', lazy=True))
 
-    status = db.Column(db.Enum('await', 'progress', 'delay', 'pending',
-                               'abnormal', 'modify', 'finish', 'discard'), server_default=("await"))
+    status = db.Column(db.Enum('draft','await', 'progress', 'delay', 'pending',
+                               'abnormal', 'modify', 'finish', 'discard'), server_default=("draft"))
     post_date = db.Column(db.DateTime, default=datetime.utcnow)
     start_date = db.Column(db.DateTime)
     finish_date = db.Column(db.DateTime)

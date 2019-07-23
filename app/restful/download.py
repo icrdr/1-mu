@@ -26,6 +26,7 @@ g_download.add_argument('file_id', location='args', required=True, action='split
 
 @n_download.route('')
 class DownloadApi(Resource):
+    @permission_required()
     @api.expect(g_download)
     def get(self):
         args = g_download.parse_args()
