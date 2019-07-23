@@ -49,10 +49,10 @@ class WxApi(Resource):
         # parse xml
         xml_dict = xmltodict.parse(xml_str, encoding='utf-8')
         xml_dict = xml_dict['xml']
-        print(xml_dict['MsgType'])
+        # print(xml_dict['MsgType'])
         if(xml_dict['MsgType'] == 'event'):
-            if 'EventKey' in xml_dict:
-                print('event_key: '+xml_dict['EventKey'])
+            # if 'EventKey' in xml_dict:
+            #     print('event_key: '+ str(xml_dict['EventKey']))
             # print(xml_dict['FromUserName'])
             if 'login' in xml_dict['EventKey']:
                 try:
