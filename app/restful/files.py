@@ -1,7 +1,7 @@
 from flask_restplus import Resource, reqparse, fields
 from flask import g, request
 from .. import api, db, app
-from ..model import File, PERMISSIONS, Stage, Preview
+from ..model import File, Stage, Preview
 
 from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
@@ -10,6 +10,7 @@ import os, shortuuid
 from ..utility import buildUrl, getAvatar
 from psd_tools import PSDImage
 from PIL import Image
+PERMISSIONS = app.config['PERMISSIONS']
 
 ns_file = api.namespace('api/files', description='upload operations')
 

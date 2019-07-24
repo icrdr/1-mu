@@ -2,10 +2,10 @@ from flask_restplus import reqparse
 from functools import wraps
 from flask import g, request
 from .. import api, app
-from ..model import User, PERMISSIONS
+from ..model import User
 from werkzeug.security import check_password_hash
 import jwt, base64
-
+PERMISSIONS = app.config['PERMISSIONS']
 g_user = reqparse.RequestParser()
 # g_user.add_argument('Authorization', required=True, location='headers',
 #                     help="Basic authorization or token.")

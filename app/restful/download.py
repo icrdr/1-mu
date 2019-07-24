@@ -1,14 +1,14 @@
 from flask_restplus import Resource, reqparse, fields
 from flask import g, request
 from .. import api, db, app
-from ..model import File, PERMISSIONS
+from ..model import File
 
 from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
 from datetime import datetime
 import os, shortuuid, zipfile
 from ..utility import buildUrl
-
+PERMISSIONS = app.config['PERMISSIONS']
 n_download = api.namespace('api/download', description='upload operations')
 
 m_file = api.model('file', {

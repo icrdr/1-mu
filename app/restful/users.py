@@ -1,11 +1,11 @@
 from flask_restplus import Resource, reqparse, fields, marshal
 from flask import g, request
-from .. import api, db
-from ..model import User, PERMISSIONS
+from .. import api, db,app
+from ..model import User
 from ..utility import buildUrl, getAvatar
 from werkzeug.security import generate_password_hash
 from .decorator import permission_required, admin_required
-
+PERMISSIONS = app.config['PERMISSIONS']
 n_user = api.namespace('api/users', description='User Operations')
 
 m_wx_user = api.model('user', {
