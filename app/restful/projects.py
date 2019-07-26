@@ -149,14 +149,11 @@ class PorjectsApi(Resource):
         projects = record_query.items
         total = record_query.total
 
-        if(projects):
-            output = {
-                'projects': projects,
-                'total': total
-            }
-            return marshal(output, M_PROJECTS, skip_none=True), 200
-        else:
-            api.abort(400, "projects doesn't exist")
+        output = {
+            'projects': projects,
+            'total': total
+        }
+        return marshal(output, M_PROJECTS, skip_none=True), 200
 
     @api.marshal_with(M_PROJECT)
     @api.expect(POST_PROJECT)

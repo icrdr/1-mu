@@ -48,6 +48,22 @@ class Config:
     SCHEDULER_JOBSTORES = {
         'default': SQLAlchemyJobStore(url = DATABASE_URI)
     }
+    
+    PERMISSIONS = {
+        'ADMIN': 1,
+        'WRITE': 2,
+        'EDIT': 4,
+        'UPLOAD': 8
+    }
+
+    ROLE_PRESSENT = {
+        'ROLES': {
+            'Admin': [PERMISSIONS['WRITE'], PERMISSIONS['EDIT'], PERMISSIONS['UPLOAD'], PERMISSIONS['ADMIN']],
+            'Editor': [PERMISSIONS['WRITE'], PERMISSIONS['UPLOAD'], PERMISSIONS['EDIT']],
+            'Visitor': [PERMISSIONS['WRITE'], PERMISSIONS['UPLOAD']],
+        },
+        'DEFAULT': 'Visitor'
+    }
 
 class DevelopmentConfig(Config):
     pass
