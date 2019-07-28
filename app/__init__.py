@@ -42,7 +42,6 @@ def update():
     model.Role.insert_roles()
     model.File.clear_missing_file()
 
-
 @app.cli.command()
 def init():
     # create tables
@@ -53,6 +52,9 @@ def init():
     model.User.create_admin()
     db_init()
 
+@app.cli.command()
+def dropProject():
+    model.Project.delete_all_project()
 
 @app.cli.command()
 def doc():

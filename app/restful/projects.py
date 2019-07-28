@@ -25,22 +25,7 @@ M_FILE = api.model('file', {
     'previews': fields.List(fields.Nested(M_PREVIEW)),
 })
 
-M_PHASE = api.model('phase', {
-    'id': fields.Integer,
-    'days_need': fields.Integer,
-    'upload_date': fields.String,
-    'feedback_date': fields.String,
-    'creator_upload': fields.String,
-    'client_feedback': fields.String,
-    'upload_files': fields.List(fields.Nested(M_FILE))
-})
 
-M_STAGE = api.model('stage', {
-    'id': fields.Integer,
-    'name': fields.String,
-    'start_date': fields.String,
-    'phases': fields.List(fields.Nested(M_PHASE))
-})
 
 M_CREATOR = api.model('creator', {
     'id': fields.Integer,
@@ -58,7 +43,23 @@ M_TAG = api.model('tag', {
     'id': fields.Integer,
     'name': fields.String,
 })
+M_PHASE = api.model('phase', {
+    'id': fields.Integer,
+    'days_need': fields.Integer,
+    'upload_date': fields.String,
+    'feedback_date': fields.String,
+    'creator_upload': fields.String,
+    'creator': fields.Nested(M_CREATOR),
+    'client_feedback': fields.String,
+    'upload_files': fields.List(fields.Nested(M_FILE))
+})
 
+M_STAGE = api.model('stage', {
+    'id': fields.Integer,
+    'name': fields.String,
+    'start_date': fields.String,
+    'phases': fields.List(fields.Nested(M_PHASE))
+})
 M_PROJECT = api.model('project', {
     'id': fields.Integer,
     'title': fields.String,

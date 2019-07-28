@@ -223,6 +223,12 @@ class Project(db.Model):
         return self
 
     @staticmethod
+    def delete_all_project():
+        projects = Project.query.all()
+        for project in projects:
+            project.delete()
+        print('all project deleted.')
+
     def create_project(title, client_id, creators, design, stages, tags, files, confirm):
         """Create new project."""
          # create project
