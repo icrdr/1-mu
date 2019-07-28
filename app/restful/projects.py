@@ -98,7 +98,9 @@ POST_PROJECT = reqparse.RequestParser()\
     .add_argument('design', required=True)\
     .add_argument('stages', type=list, location='json', required=True)\
     .add_argument('confirm', type=int, default=0)\
-    .add_argument('tags', action='append')
+    .add_argument('tags', action='append')\
+    .add_argument('files', type=int, action='append')
+
 
 @N_PROJECT.route('')
 class PorjectsApi(Resource):
@@ -177,6 +179,7 @@ class PorjectsApi(Resource):
                 design=args['design'],
                 stages=args['stages'],
                 tags=args['tags'],
+                files=args['files'],
                 confirm=args['confirm'],
             )
             return new_project, 201
@@ -190,6 +193,9 @@ UPDATE_PROJECT = reqparse.RequestParser()\
     .add_argument('creators', type=int, action='append')\
     .add_argument('client_id', type=int, )\
     .add_argument('design')\
+    .add_argument('files', type=int, action='append')
+
+
 
 @N_PROJECT.route('/<int:project_id>')
 class PorjectApi(Resource):
@@ -211,9 +217,11 @@ class PorjectApi(Resource):
             for creator_id in args['creators']:
                 if not User.query.get(creator_id):
                     return api.abort(401, "Creator is not exist.")
+        
         if not g.current_user.can(PERMISSIONS['ADMIN']):
-            api.abort(
-                403, "Administrator privileges required for request update action.")
+            if (not g.current_user in project.creators) or (project.status != 'await'):
+                api.abort(
+                    403, "Administrator privileges required for request update action.")
 
         try:
             if args['client_id'] != None:
@@ -228,6 +236,13 @@ class PorjectApi(Resource):
                 for creator_id in args['creators']:
                     creator = User.query.get(creator_id)
                     project.creators.append(creator)
+            
+            if args['files']:
+                project.files = []
+                for file_id in args['files']:
+                    file = File.query.get(file_id)
+                    project.files.append(file)
+
             db.session.commit()
             return project, 201
         except Exception as error:
@@ -261,10 +276,12 @@ class PorjectStartApi(Resource):
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
+
 UPLOAD_PROJECT = reqparse.RequestParser()\
     .add_argument('upload', required=True)\
     .add_argument('upload_files', type=list, location='json', required=True)\
     .add_argument('confirm', type=int, default=0)
+
 
 @N_PROJECT.route('/<int:project_id>/upload')
 class PorjectUploadApi(Resource):
@@ -295,9 +312,11 @@ class PorjectUploadApi(Resource):
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
+
 MODIFY_PROJECT = reqparse.RequestParser()\
     .add_argument('feedback', required=True)\
     .add_argument('confirm', type=int, default=0)
+
 
 @N_PROJECT.route('/<int:project_id>/modify')
 class PorjectModifyApi(Resource):
@@ -315,11 +334,13 @@ class PorjectModifyApi(Resource):
                     403, "Only the project's client can feedback(Administrator privileges required).")
 
         try:
-            project.modify(g.current_user.id, args['feedback'], args['confirm'])
+            project.modify(g.current_user.id,
+                           args['feedback'], args['confirm'])
             return project, 201
         except Exception as error:
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
+
 
 @N_PROJECT.route('/<int:project_id>/finish')
 class PorjectFinishApi(Resource):
@@ -341,6 +362,7 @@ class PorjectFinishApi(Resource):
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
+
 @N_PROJECT.route('/<int:project_id>/discard')
 class PorjectDiscardApi(Resource):
     @api.marshal_with(M_PROJECT)
@@ -356,6 +378,7 @@ class PorjectDiscardApi(Resource):
         except Exception as error:
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
+
 
 @N_PROJECT.route('/<int:project_id>/resume')
 class PorjectResumeApi(Resource):
@@ -373,6 +396,7 @@ class PorjectResumeApi(Resource):
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
+
 @N_PROJECT.route('/<int:project_id>/abnormal')
 class PorjectAbnormalApi(Resource):
     @api.marshal_with(M_PROJECT)
@@ -388,6 +412,7 @@ class PorjectAbnormalApi(Resource):
         except Exception as error:
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
+
 
 def projectCheck(project_id):
     project = Project.query.get(project_id)

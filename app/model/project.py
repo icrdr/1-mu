@@ -29,7 +29,13 @@ PHASE_FILE = db.Table(
     db.Column('phase_id', db.Integer,
               db.ForeignKey('phases.id')),
 )
-
+PROJECT_FILE = db.Table(
+    'project_files',
+    db.Column('file_id', db.Integer,
+              db.ForeignKey('files.id')),
+    db.Column('project_id', db.Integer,
+              db.ForeignKey('projects.id')),
+)
 PHASE_UPLOAD_FILE = db.Table(
     'phase_upload_files',
     db.Column('upload_file_id', db.Integer,
@@ -68,6 +74,9 @@ class Project(db.Model):
     # one-many: project.client-User.projects_as_client
     client = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
         'projects_as_client', lazy=True))
+    # many-many: File.phases-Phase.files
+    files = db.relationship('File', secondary=PROJECT_FILE,
+                            lazy='subquery', backref=db.backref('projects', lazy=True))
     # one-many: Comment.parent_post-Post.comments
     stages = db.relationship(
         'Stage', backref=db.backref('parent_project', lazy=True))
@@ -214,7 +223,7 @@ class Project(db.Model):
         return self
 
     @staticmethod
-    def create_project(title, client_id, creators, design, stages, tags, confirm):
+    def create_project(title, client_id, creators, design, stages, tags, files, confirm):
         """Create new project."""
          # create project
         new_project = Project(
@@ -247,6 +256,12 @@ class Project(db.Model):
                     _tag = Tag(name = tag)
                     db.session.add(_tag)
                 new_project.tags.append(_tag)
+                
+        if files:
+            for file in files:
+                _file = File.query.get(file)
+                if _file:
+                    new_project.files.append(_file)
 
         if confirm:
             new_project.status='await'
