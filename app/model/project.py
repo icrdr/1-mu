@@ -214,7 +214,6 @@ class Project(db.Model):
             db.session.delete(stage)
         db.session.delete(self)
         removeDelayCounter(self.id)
-        db.session.delete(self.creator_group)
         db.session.commit()
         return self
 
