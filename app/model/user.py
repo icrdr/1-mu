@@ -22,6 +22,14 @@ USER_GROUP = db.Table('user_groups',
                                 db.ForeignKey('users.id'))
                       )
 
+GROUP_ADMIN = db.Table('group_admins',
+                      db.Column('user_id', db.Integer,
+                                db.ForeignKey('users.id')),
+                      db.Column('group_id', db.Integer,
+                                db.ForeignKey('groups.id')),
+                      )
+
+
 class User(db.Model):
     """User Model"""
     __tablename__ = 'users'
@@ -163,7 +171,10 @@ class Group(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     description = db.Column(db.String(512))
-
+    admins = db.relationship(
+        'User', secondary=GROUP_ADMIN,
+        lazy='subquery', backref=db.backref('groups_as_admin', lazy=True))
+    reg_date = db.Column(db.DateTime, default=datetime.utcnow)
     def __repr__(self):
         return '<Group %r>' % self.name
 
