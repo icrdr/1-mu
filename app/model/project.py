@@ -4,17 +4,10 @@ Project Stage Phase Propose
 
 from datetime import datetime, timedelta
 from .. import db, scheduler
-from .user import User
+from .user import User, Group
 from .file import File
 from .post import Tag
 
-PROJECT_CREATOR = db.Table(
-    'project_creators',
-    db.Column('creator_user_id', db.Integer,
-              db.ForeignKey('users.id')),
-    db.Column('project_id', db.Integer,
-              db.ForeignKey('projects.id')),
-)
 PROJECT_TAG = db.Table(
     'project_tags',
     db.Column('tag_id', db.Integer,
@@ -53,10 +46,12 @@ class Project(db.Model):
     design = db.Column(db.Text)
     # one-many: Post.client-User.projects_as_client
     client_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    client = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
+        'projects_as_client', lazy=True))
     # many-many: User.projects-Project.creators
-    creators = db.relationship(
-        'User', secondary=PROJECT_CREATOR,
-        lazy='subquery', backref=db.backref('projects_as_creator', lazy=True))
+    creator_group_id = db.Column(db.Integer, db.ForeignKey('groups.id'))
+    creator_group = db.relationship('Group', foreign_keys=creator_group_id, backref=db.backref(
+        'projects', lazy=True))
     # many-many: User.projects-Project.creators
     tags = db.relationship(
         'Tag', secondary=PROJECT_TAG,
@@ -219,6 +214,7 @@ class Project(db.Model):
             db.session.delete(stage)
         db.session.delete(self)
         removeDelayCounter(self.id)
+        db.session.delete(self.creator_group)
         db.session.commit()
         return self
 
@@ -229,18 +225,30 @@ class Project(db.Model):
             project.delete()
         print('all project deleted.')
 
-    def create_project(title, client_id, creators, design, stages, tags, files, confirm):
+    def create_project(title, client_id, creators, group_id, design, stages, tags, files, confirm):
         """Create new project."""
-         # create project
+        # create project
         new_project = Project(
             title=title,
             client_user_id=client_id,
             design=design
         )
         db.session.add(new_project)
-        for creator_id in creators:
-            creator = User.query.get(creator_id)
-            new_project.creators.append(creator)
+
+        if group_id:
+            new_project.creator_group_id = group_id
+        else:
+            new_group = Group(
+                name=title+'制作小组',
+                description=title
+            )
+            db.session.add(new_group)
+            for creator_id in creators:
+                creator = User.query.get(creator_id)
+                new_group.users.append(creator)
+            new_group.admins.append(User.query.get(creators[0]))
+
+            new_project.creator_group = new_group
 
         # create stage
         for stage in stages:
@@ -254,15 +262,15 @@ class Project(db.Model):
                 days_need=stage['days_need']
             )
             db.session.add(new_phase)
-            
+
         if tags:
             for tag in tags:
                 _tag = Tag.query.filter_by(name=tag).first()
                 if not _tag:
-                    _tag = Tag(name = tag)
+                    _tag = Tag(name=tag)
                     db.session.add(_tag)
                 new_project.tags.append(_tag)
-                
+
         if files:
             for file in files:
                 _file = File.query.get(file)
@@ -270,10 +278,10 @@ class Project(db.Model):
                     new_project.files.append(_file)
 
         if confirm:
-            new_project.status='await'
+            new_project.status = 'await'
         db.session.commit()
         return new_project
-    
+
     def __repr__(self):
         return '<Project %r>' % self.title
 

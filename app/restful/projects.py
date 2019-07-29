@@ -5,7 +5,7 @@ from flask_restplus import Resource, reqparse, fields, marshal
 from flask import g
 from sqlalchemy import or_
 from .. import api, app, db
-from ..model import Stage, Phase, User, File, Project, Tag
+from ..model import Stage, Phase, User, File, Project, Tag, Group
 from ..utility import buildUrl, getAvatar
 from .decorator import permission_required, admin_required
 
@@ -64,12 +64,17 @@ M_STAGE = api.model('stage', {
     'start_date': fields.String,
     'phases': fields.List(fields.Nested(M_PHASE))
 })
+M_GROUP = api.model('group', {
+    'id': fields.Integer,
+    'admins': fields.List(fields.Nested(M_CREATOR)),
+    'users': fields.List(fields.Nested(M_CREATOR))
+})
 M_PROJECT = api.model('project', {
     'id': fields.Integer,
     'title': fields.String,
     'design': fields.String,
     'status': fields.String,
-    'creators': fields.List(fields.Nested(M_CREATOR)),
+    'creator_group': fields.Nested(M_GROUP),
     'client': fields.Nested(M_CLIENT),
     'public_date': fields.String,
     'start_date': fields.String,
@@ -98,7 +103,8 @@ GET_PROJECT = reqparse.RequestParser()\
 
 POST_PROJECT = reqparse.RequestParser()\
     .add_argument('title', required=True)\
-    .add_argument('creators', type=int, action='append', required=True)\
+    .add_argument('group_id', type=int)\
+    .add_argument('creators', type=int, action='append')\
     .add_argument('client_id', type=int, required=True)\
     .add_argument('design', required=True)\
     .add_argument('stages', type=list, location='json', required=True)\
@@ -114,7 +120,7 @@ class PorjectsApi(Resource):
         args = GET_PROJECT.parse_args()
         query = Project.query
         if args['creator_id']:
-            query = query.join(Project.creators).filter(
+            query = query.join(Project.creator_group).join(Group.users).filter(
                 User.id.in_(args['creator_id']))
         if args['client_id']:
             query = query.filter(Project.client_user_id.in_(args['client_id']))
@@ -168,19 +174,19 @@ class PorjectsApi(Resource):
     def post(self):
         args = POST_PROJECT.parse_args()
         # permission checking
-        if not User.query.get(args['client_id']):
-            return api.abort(401, "Client is not exist.")
-        for creator_id in args['creators']:
-            if not User.query.get(creator_id):
-                return api.abort(401, "Creator is not exist.")
         if not g.current_user.can(PERMISSIONS['ADMIN']):
             if (not g.current_user.id in args['creators']):
                 return api.abort(403, "Poster must be one of the creators(Administrator privileges required).")
+        if not User.query.get(args['client_id']):
+            return api.abort(401, "Client is not exist.")
+        if not Group.query.get(args['group_id']):
+            return api.abort(401, "Group is not exist.")
         try:
             new_project = Project.create_project(
                 title=args['title'],
                 client_id=args['client_id'],
                 creators=args['creators'],
+                group_id=args['group_id'],
                 design=args['design'],
                 stages=args['stages'],
                 tags=args['tags'],
@@ -195,7 +201,7 @@ class PorjectsApi(Resource):
 
 UPDATE_PROJECT = reqparse.RequestParser()\
     .add_argument('title')\
-    .add_argument('creators', type=int, action='append')\
+    .add_argument('group_id', type=int)\
     .add_argument('client_id', type=int, )\
     .add_argument('design')\
     .add_argument('files', type=int, action='append')
@@ -218,13 +224,11 @@ class PorjectApi(Resource):
         if args['client_id']:
             if not User.query.get(args['client_id']):
                 return api.abort(401, "Client is not exist.")
-        if args['creators']:
-            for creator_id in args['creators']:
-                if not User.query.get(creator_id):
-                    return api.abort(401, "Creator is not exist.")
-        
-        if not g.current_user.can(PERMISSIONS['ADMIN']):
-            if (not g.current_user in project.creators) or (project.status != 'await'):
+        if args['group_id']:
+            if not Group.query.get(args['group_id']):
+                return api.abort(401, "Group is not exist.")
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            if (not g.current_user in project.creator_group.users) or (project.status != 'await'):
                 api.abort(
                     403, "Administrator privileges required for request update action.")
 
@@ -235,12 +239,8 @@ class PorjectApi(Resource):
                 project.title = args['title']
             if args['design'] != None:
                 project.design = args['design']
-
-            if args['creators']:
-                project.creators = []
-                for creator_id in args['creators']:
-                    creator = User.query.get(creator_id)
-                    project.creators.append(creator)
+            if args['group_id']:
+                project.creator_group_id = args['group_id']
             
             if args['files']:
                 project.files = []
@@ -302,7 +302,7 @@ class PorjectUploadApi(Resource):
             api.abort(
                 401, "Creator can upload only during 'modify' or 'progress'.")
         if not g.current_user.can(PERMISSIONS['ADMIN']):
-            if not g.current_user in project.creators:
+            if not g.current_user in project.creator_group.users:
                 api.abort(
                     403, "Only the project's creator can upload(Administrator privileges required).")
         try:

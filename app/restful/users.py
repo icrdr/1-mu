@@ -28,15 +28,19 @@ M_GROUP = api.model('group', {
     'admins': fields.List(fields.Nested(M_GROUP_MEMBER)),
     'users': fields.List(fields.Nested(M_GROUP_MEMBER)),
 })
-
-m_user = api.model('user', {
+M_GROUP_MIN = api.model('group_min)', {
+    'id': fields.Integer(),
+    'name': fields.String(),
+})
+M_USER = api.model('user', {
     'id': fields.Integer(description="Unique identifier for the user."),
     'name': fields.String(description="Display name for the user."),
     'title': fields.String(description="The title for the user."),
     'sex': fields.String(description="The phone number for the user."),
     'email': fields.String(description="The email address for the user."),
     'phone': fields.String(description="The phone number for the user."),
-    'avatar_url': fields.String(attribute=getAvatar),
+    'groups': fields.Nested(M_GROUP_MIN),
+    'groups_as_admin': fields.Nested(M_GROUP_MIN),
     'reg_date': fields.String(description="Registration date for the user."),
     'role': fields.String(
         attribute=lambda x: str(x.role.name),
@@ -53,8 +57,8 @@ m_user = api.model('user', {
     'wx_user': fields.Nested(m_wx_user),
 })
 
-m_users = api.model('users', {
-    'users': fields.List(fields.Nested(m_user)),
+M_USERS = api.model('users', {
+    'users': fields.List(fields.Nested(M_USER)),
     'total': fields.Integer(description="Unique identifier for the user."),
 })
 
@@ -147,9 +151,9 @@ class UsersApi(Resource):
             'users':users,
             'total':total
         }
-        return marshal(output, m_users), 200
+        return marshal(output, M_USERS), 200
 
-    @api.marshal_with(m_user)
+    @api.marshal_with(M_USER)
     @api.expect(p_user)
     def post(self):
         args = p_user.parse_args()
@@ -179,7 +183,7 @@ class UsersApi(Resource):
         else:
             api.abort(400, "login name already exist")
 
-    @api.marshal_with(m_user, envelope='users')
+    @api.marshal_with(M_USER, envelope='users')
     @api.expect(u_user)
     def put(self):
         args = u_user.parse_args()
@@ -220,7 +224,7 @@ class UsersApi(Resource):
 
 @n_user.route('/<int:user_id>')
 class UserApi(Resource):
-    @api.marshal_with(m_user)
+    @api.marshal_with(M_USER)
     def get(self, user_id):
         user = User.query.get(user_id)
         if(user):

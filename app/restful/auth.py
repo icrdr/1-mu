@@ -17,7 +17,10 @@ m_wx_user = api.model('user', {
     'sex': fields.String,
     'headimg_url': fields.String,
 })
-
+M_GROUP_MIN = api.model('group_min)', {
+    'id': fields.Integer(),
+    'name': fields.String(),
+})
 m_user = api.model('user', {
     'id': fields.Integer,
     'name': fields.String,
@@ -27,6 +30,8 @@ m_user = api.model('user', {
     'phone': fields.String,
     'avatar_url': fields.String(attribute=lambda x: getAvatar(x)),
     'reg_date': fields.String,
+    'groups': fields.Nested(M_GROUP_MIN),
+    'groups_as_admin': fields.Nested(M_GROUP_MIN),
     'role': fields.String(
         attribute=lambda x: str(x.role.name)
     ),
