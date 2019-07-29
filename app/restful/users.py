@@ -39,6 +39,7 @@ M_USER = api.model('user', {
     'sex': fields.String(description="The phone number for the user."),
     'email': fields.String(description="The email address for the user."),
     'phone': fields.String(description="The phone number for the user."),
+    'avatar_url': fields.String(attribute=getAvatar),
     'groups': fields.Nested(M_GROUP_MIN),
     'groups_as_admin': fields.Nested(M_GROUP_MIN),
     'reg_date': fields.String(description="Registration date for the user."),
