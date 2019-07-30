@@ -7,6 +7,7 @@ from .. import db, scheduler
 from .user import User, Group
 from .file import File
 from .post import Tag
+import math
 
 PROJECT_TAG = db.Table(
     'project_tags',
@@ -114,7 +115,7 @@ class Project(db.Model):
             # craete new phase in current stage
             new_phase = Phase(
                 parent_stage=self.current_stage(),
-                days_need=4,  # 4 days later
+                days_need=math.floor( self.current_phase().days_need*0.2 )+1,  # 4 days later
             )
             db.session.add(new_phase)
 
