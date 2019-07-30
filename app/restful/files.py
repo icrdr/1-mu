@@ -10,6 +10,7 @@ import os, shortuuid
 from ..utility import buildUrl, getAvatar
 from psd_tools import PSDImage
 from PIL import Image
+
 PERMISSIONS = app.config['PERMISSIONS']
 
 ns_file = api.namespace('api/files', description='upload operations')
@@ -57,8 +58,10 @@ g_file.add_argument('page', location='args', type=int, default=1,
 g_file.add_argument('pre_page', location='args', type=int, default=10,
                     help="Maximum number of items to be returned in result set.")
 
-p_file = reqparse.RequestParser()
-p_file.add_argument('file', required=True, type=datastructures.FileStorage, location='files')
+p_file = reqparse.RequestParser()\
+    .add_argument('file', required=True, type=datastructures.FileStorage, location='files')\
+    .add_argument('tags', action='append')\
+    .add_argument('public', type=int, default=0)
 
 
 @ns_file.route('')
@@ -112,65 +115,26 @@ class UploadApi(Resource):
     def post(self):
         args = p_file.parse_args()
 
-        file = args['file']
-        if allowed_file(file.filename):
-            try:
-                # filename = utils.secure_filename(file.filename)
-                format = file.filename.split(".")[-1]
-                rawname = file.filename[:-len(format)-1]
-
-                date = datetime.utcnow().strftime("%Y%m%d")
-                year = date[:4]
-                month = date[4:6]
-                day = date[6:8]
-                random_name = str(shortuuid.uuid())
-                filename = random_name +'.'+ format
-                path = os.path.join(app.config['UPLOAD_FOLDER'], year, month, day)
-
-                if not os.path.exists(path):
-                    os.makedirs(path)
-
-                file.save(os.path.join(path, filename))
-                uploader_id = 1
-                if 'current_user' in g:
-                    uploader_id = g.current_user.id
-
-                new_file = File(
-                    uploader_user_id = uploader_id,
-                    name = rawname,
-                    format = format,
-                    url = str(os.path.join(year, month, day , filename)).replace('\\', '/')
-                )
-
-                db.session.add(new_file)
-                db.session.commit()
-            except Exception as e:
-                print(e)
-                api.abort(500, '[Sever Error]: '+ str(e))
-
-            if format in ['png','jpg','psd','jpeg','gif','bmp','tga','tiff','tif']:
-                try:
-                    im_path = os.path.join(path, filename)
-                    im = Image.open(im_path)
-                    im = im.convert('RGB')
-                    for size in app.config['THUMBNAIL_SIZE']:
-                        im.thumbnail((size, size))
-                        im.save(os.path.join(path, random_name) + "_%s.jpg"%str(size), "JPEG")
-
-                        new_preview = Preview(
-                            bind_file_id = new_file.id,
-                            url = str(os.path.join(year, month, day , random_name+"_%s.jpg"%str(size))).replace('\\', '/'),
-                            size = size
-                        )
-                        db.session.add(new_preview)
-                except Exception as e:
-                    print(e)
-                    # api.abort(500, '[Sever Error]: '+ str(e))
-                    
-                db.session.commit()
-            return new_file, 200
-        else:
+        if not allowed_file(args['file'].filename):
             api.abort(400, "file format not allowed!")
+        
+        uploader_id = 1
+        if 'current_user' in g:
+            uploader_id = g.current_user.id
+        
+        try:
+            new_file = File.create_file(
+                    uploader_id = uploader_id,
+                    file=args['file'],
+                    tags=args['tags'],
+                    public=args['public'],
+                )
+        except Exception as e:
+            print(e)
+            api.abort(500, '[Sever Error]: '+ str(e))
+
+        return new_file, 200
+            
 
 def allowed_file(filename):
     return '.' in filename and \

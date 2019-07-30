@@ -1,5 +1,5 @@
 import os
-from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
+from apscheduler.jobstores.redis import RedisJobStore
 
 class Config:
     ADMIN_LOGIN = 'admin'
@@ -46,7 +46,7 @@ class Config:
 
     # APScheduler
     SCHEDULER_JOBSTORES = {
-        'default': SQLAlchemyJobStore(url = DATABASE_URI)
+        'default': RedisJobStore()
     }
     
     PERMISSIONS = {

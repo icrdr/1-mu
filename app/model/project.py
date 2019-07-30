@@ -225,6 +225,7 @@ class Project(db.Model):
             project.delete()
         print('all project deleted.')
 
+    @staticmethod
     def create_project(title, client_id, creators, group_id, design, stages, tags, files, confirm):
         """Create new project."""
         # create project
@@ -368,7 +369,8 @@ def addDelayCounter(project_id, days_need, offset=timedelta(microseconds=0)):
         args=[project_id],
         trigger='date',
         run_date=deadline,
-        replace_existing=True
+        replace_existing=True,
+        misfire_grace_time= 86400
     )
     print('addCounter: '+str(project_id))
 
