@@ -125,7 +125,7 @@ class PorjectsApi(Resource):
         if args['creator_id']:
             query = query.join(Project.creator_group).join(Group.users).filter(
                 User.id.in_(args['creator_id']))
-                
+
         if args['group_id']:
             query = query.filter(Project.creator_group_id.in_(args['group_id']))
 
@@ -275,7 +275,7 @@ class PorjectStartApi(Resource):
     @permission_required()
     def put(self, project_id):
         project = projectCheck(project_id)
-        if not g.current_user.can(PERMISSIONS['ADMIN']):
+        if not g.current_user.can(PERMISSIONS['EDIT']):
             if g.current_user.id != project.client_user_id:
                 api.abort(
                     403, "Only the project's client can start(Administrator privileges required).")
@@ -309,7 +309,7 @@ class PorjectUploadApi(Resource):
         if project.status != 'modify' and project.status != 'progress':
             api.abort(
                 401, "Creator can upload only during 'modify' or 'progress'.")
-        if not g.current_user.can(PERMISSIONS['ADMIN']):
+        if not g.current_user.can(PERMISSIONS['EDIT']):
             if not g.current_user in project.creator_group.users:
                 api.abort(
                     403, "Only the project's creator can upload(Administrator privileges required).")
@@ -341,7 +341,7 @@ class PorjectModifyApi(Resource):
         if project.status != 'pending':
             api.abort(
                 401, "Project can be set to 'modify' only after creator's upload.")
-        if not g.current_user.can(PERMISSIONS['ADMIN']):
+        if not g.current_user.can(PERMISSIONS['EDIT']):
             if g.current_user.id != project.client_user_id:
                 api.abort(
                     403, "Only the project's client can feedback(Administrator privileges required).")
@@ -364,7 +364,7 @@ class PorjectFinishApi(Resource):
         if project.status != 'pending':
             api.abort(
                 401, "Project can be set to 'finish' only after creator's upload.")
-        if not g.current_user.can(PERMISSIONS['ADMIN']):
+        if not g.current_user.can(PERMISSIONS['EDIT']):
             if g.current_user.id != project.client_user_id:
                 api.abort(
                     403, "Only the project's client can feedback(Administrator privileges required).")
@@ -382,7 +382,7 @@ class PorjectDiscardApi(Resource):
     @permission_required()
     def put(self, project_id):
         project = Project.query.get(project_id)
-        if not g.current_user.can(PERMISSIONS['ADMIN']):
+        if not g.current_user.can(PERMISSIONS['EDIT']):
             api.abort(
                 403, "Administrator privileges required for request update action.")
         try:
@@ -399,7 +399,7 @@ class PorjectResumeApi(Resource):
     @permission_required()
     def put(self, project_id):
         project = Project.query.get(project_id)
-        if not g.current_user.can(PERMISSIONS['ADMIN']):
+        if not g.current_user.can(PERMISSIONS['EDIT']):
             api.abort(
                 403, "Administrator privileges required for request update action.")
         try:
@@ -416,7 +416,7 @@ class PorjectAbnormalApi(Resource):
     @permission_required()
     def put(self, project_id):
         project = Project.query.get(project_id)
-        if not g.current_user.can(PERMISSIONS['ADMIN']):
+        if not g.current_user.can(PERMISSIONS['EDIT']):
             api.abort(
                 403, "Administrator privileges required for request update action.")
         try:
