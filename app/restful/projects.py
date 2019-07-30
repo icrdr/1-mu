@@ -54,6 +54,7 @@ M_PHASE = api.model('phase', {
     'feedback_date': fields.String,
     'creator_upload': fields.String,
     'creator': fields.Nested(M_UPLOADER),
+    'client': fields.Nested(M_UPLOADER),
     'client_feedback': fields.String,
     'upload_files': fields.List(fields.Nested(M_FILE))
 })
@@ -66,6 +67,7 @@ M_STAGE = api.model('stage', {
 })
 M_GROUP = api.model('group', {
     'id': fields.Integer,
+    'name': fields.String,
     'admins': fields.List(fields.Nested(M_CREATOR)),
     'users': fields.List(fields.Nested(M_CREATOR))
 })
@@ -90,6 +92,7 @@ M_PROJECTS = api.model('projects', {
 
 GET_PROJECT = reqparse.RequestParser()\
     .add_argument('creator_id', location='args', action='split')\
+    .add_argument('group_id', location='args', action='split')\
     .add_argument('client_id', location='args', action='split')\
     .add_argument('title', location='args', action='split')\
     .add_argument('search', location='args')\
@@ -122,8 +125,13 @@ class PorjectsApi(Resource):
         if args['creator_id']:
             query = query.join(Project.creator_group).join(Group.users).filter(
                 User.id.in_(args['creator_id']))
+                
+        if args['group_id']:
+            query = query.filter(Project.creator_group_id.in_(args['group_id']))
+
         if args['client_id']:
             query = query.filter(Project.client_user_id.in_(args['client_id']))
+
         if args['title']:
             query = query.filter(Project.title.in_(args['title']))
 
