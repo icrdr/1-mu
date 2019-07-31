@@ -1,7 +1,7 @@
 from flask_restplus import Resource, reqparse, fields
 from flask import g, request
 from .. import api, db, app
-from ..model import File, Stage, Preview
+from ..model import File, Stage, Preview, Tag
 
 from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
@@ -10,6 +10,7 @@ import os, shortuuid
 from ..utility import buildUrl, getAvatar
 from psd_tools import PSDImage
 from PIL import Image
+from sqlalchemy import or_
 
 PERMISSIONS = app.config['PERMISSIONS']
 
@@ -36,33 +37,23 @@ m_file = api.model('file', {
     'upload_date': fields.String(description="Registration date for the user.")
 })
 
-g_file = reqparse.RequestParser()
-g_file.add_argument('user_id', location='args', action='split',
-                    help="Limit result set to users matching at least one specific \
-                    role provided. Accepts list or single role.")
-g_file.add_argument('format', location='args',
-                    choices=['png', 'jpg', 'jpeg', 'txt', 'pdf', 'gif'],
-                    help="Order sort attribute ascending or descending.")
-g_file.add_argument('include', location='args', action='split',
-                    help="Limit result set to specific IDs.")
-g_file.add_argument('exclude', location='args', action='split',
-                    help="Ensure result set excludes specific IDs.")
-g_file.add_argument('order', location='args', default='asc',
-                    choices=['asc', 'desc'],
-                    help="Order sort attribute ascending or descending.")
-g_file.add_argument('order_by', location='args', default='id',
-                    choices=['id', 'name', 'reg_date'],
-                    help="Sort collection by object attribute.")
-g_file.add_argument('page', location='args', type=int, default=1,
-                    help="Current page of the collection.")
-g_file.add_argument('pre_page', location='args', type=int, default=10,
-                    help="Maximum number of items to be returned in result set.")
+g_file = reqparse.RequestParser()\
+    .add_argument('user_id', location='args', action='split')\
+    .add_argument('search', location='args')\
+    .add_argument('format', location='args',choices=['png', 'jpg', 'jpeg', 'txt', 'pdf', 'gif'])\
+    .add_argument('include', location='args', action='split')\
+    .add_argument('exclude', location='args', action='split')\
+    .add_argument('order', location='args', default='asc',choices=['asc', 'desc'])\
+    .add_argument('order_by', location='args', default='id',
+                    choices=['id', 'name', 'reg_date'])\
+    .add_argument('page', location='args', type=int, default=1)\
+    .add_argument('pre_page', location='args', type=int, default=10)\
+    .add_argument('public', type=int)
 
 p_file = reqparse.RequestParser()\
     .add_argument('file', required=True, type=datastructures.FileStorage, location='files')\
     .add_argument('tags', action='append')\
     .add_argument('public', type=int, default=0)
-
 
 @ns_file.route('')
 class UploadApi(Resource):
@@ -72,11 +63,18 @@ class UploadApi(Resource):
     def get(self):
         args = g_file.parse_args()
         query = File.query
-        if args['user_id']:
 
+        if args['public'] != None:
+            query = query.filter_by(public=args['public'])
+
+        if args['user_id']:
             query = query.filter(File.uploader_user_id.in_(args['user_id']))
         if args['format']:
             query = query.filter_by(format=args['format'])
+
+        if args['search']:
+            query = query.join(File.tags).filter(
+                or_(File.name.contains(args['search']), Tag.name.contains(args['search'])))
 
         if args['include']:
             if args['exclude']:
@@ -104,10 +102,7 @@ class UploadApi(Resource):
         files_list = query.paginate(
             args['page'], args['pre_page'], error_out=False).items
 
-        if(files_list):
-            return files_list, 200
-        else:
-            api.abort(400, "file doesn't exist")
+        return files_list, 200
 
     @api.marshal_with(m_file)
     @api.expect(p_file)

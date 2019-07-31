@@ -4,6 +4,7 @@ import os
 import shortuuid
 from psd_tools import PSDImage
 from PIL import Image
+from .post import Tag
 
 FILE_TAG = db.Table(
     'file_tags',

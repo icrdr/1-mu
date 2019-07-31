@@ -3,7 +3,7 @@ Project Api
 """
 from flask_restplus import Resource, reqparse, fields, marshal
 from flask import g
-from sqlalchemy import or_
+from sqlalchemy import or_, case
 from .. import api, app, db
 from ..model import Stage, Phase, User, File, Project, Tag, Group
 from ..utility import buildUrl, getAvatar
@@ -102,7 +102,7 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=10)\
     .add_argument('order', location='args', default='asc', choices=['asc', 'desc'])\
-    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date'])
+    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date','status'])
 
 POST_PROJECT = reqparse.RequestParser()\
     .add_argument('title', required=True)\
@@ -164,6 +164,11 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.start_date.asc())
             else:
                 query = query.order_by(Project.start_date.desc())
+        elif args['order_by'] == 'status':
+            whens = {'draft':5, 'await':4, 'progress':2, 'delay':0, 'pending':3,
+                'abnormal':7, 'modify':1, 'finish':6, 'discard':8}
+            sort_logic = case(value=Project.status, whens=whens).label("status")
+            query = query.order_by(sort_logic)
 
         record_query = query.paginate(
             args['page'], args['pre_page'], error_out=False)
