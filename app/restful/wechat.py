@@ -368,4 +368,4 @@ def createUser(data):
         }, 200
     except Exception as e:
         print(e)
-        return api.abort(400, "create user failed")
+        api.abort(400, "create user failed")

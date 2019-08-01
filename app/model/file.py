@@ -77,7 +77,12 @@ class File(db.Model):
         if format in ['png','jpg','psd','jpeg','gif','bmp','tga','tiff','tif']:
             try:
                 im_path = os.path.join(path, filename)
-                im = Image.open(im_path)
+                im = None
+                if format == 'psd':
+                    psd = PSDImage.open(im_path)
+                    im = psd.compose()
+                else:
+                    im = Image.open(im_path)
                 im = im.convert('RGB')
                 for size in app.config['THUMBNAIL_SIZE']:
                     im.thumbnail((size, size))

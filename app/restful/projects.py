@@ -165,16 +165,16 @@ class PorjectsApi(Resource):
             else:
                 query = query.order_by(Project.start_date.desc())
         elif args['order_by'] == 'status':
-            whens = {'draft':5, 'await':4, 'progress':2, 'delay':0, 'pending':3,
-                'abnormal':7, 'modify':1, 'finish':6, 'discard':8}
-            sort_logic = case(value=Project.status, whens=whens).label("status")
-            query = query.order_by(sort_logic)
+            if args['order'] == 'asc':
+                query = query.order_by(Project.status.asc())
+            else:
+                query = query.order_by(Project.status.desc())
 
         record_query = query.paginate(
             args['page'], args['pre_page'], error_out=False)
         projects = record_query.items
         total = record_query.total
-
+        print(projects[0].tags)
         output = {
             'projects': projects,
             'total': total
@@ -187,13 +187,12 @@ class PorjectsApi(Resource):
     def post(self):
         args = POST_PROJECT.parse_args()
         # permission checking
-        if not g.current_user.can(PERMISSIONS['ADMIN']):
-            if (not g.current_user.id in args['creators']):
-                return api.abort(403, "Poster must be one of the creators(Administrator privileges required).")
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            api.abort(403, "Poster must be one of the creators(Administrator privileges required).")
         if not User.query.get(args['client_id']):
-            return api.abort(401, "Client is not exist.")
+            api.abort(401, "Client is not exist.")
         if not Group.query.get(args['group_id']):
-            return api.abort(401, "Group is not exist.")
+            api.abort(401, "Group is not exist.")
         try:
             new_project = Project.create_project(
                 title=args['title'],
@@ -236,10 +235,10 @@ class PorjectApi(Resource):
         project = projectCheck(project_id)
         if args['client_id']:
             if not User.query.get(args['client_id']):
-                return api.abort(401, "Client is not exist.")
+                api.abort(401, "Client is not exist.")
         if args['group_id']:
             if not Group.query.get(args['group_id']):
-                return api.abort(401, "Group is not exist.")
+                api.abort(401, "Group is not exist.")
         if not g.current_user.can(PERMISSIONS['EDIT']):
             if (not g.current_user in project.creator_group.users) or (project.status != 'await'):
                 api.abort(
