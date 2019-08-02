@@ -1,7 +1,7 @@
 from flask_restplus import Resource, reqparse, fields
 from flask import g, request
 from .. import api, db, app
-from ..model import File, Stage, Preview, Tag
+from ..model import File, Stage, Preview, Tag, User, Group
 
 from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
@@ -39,7 +39,8 @@ m_file = api.model('file', {
 
 g_file = reqparse.RequestParser()\
     .add_argument('user_id', location='args', action='split')\
-    .add_argument('search', location='args')\
+    .add_argument('group_id', location='args', action='split')\
+    .add_argument('search', location='args', action='split')\
     .add_argument('format', location='args',choices=['png', 'jpg', 'jpeg', 'txt', 'pdf', 'gif'])\
     .add_argument('include', location='args', action='split')\
     .add_argument('exclude', location='args', action='split')\
@@ -70,12 +71,18 @@ class UploadApi(Resource):
 
         if args['user_id']:
             query = query.filter(File.uploader_user_id.in_(args['user_id']))
+
+        if args['group_id']:
+            query = query.join(File.uploader).join(User.groups).filter(
+                Group.id.in_(args['group_id']))
+
         if args['format']:
             query = query.filter_by(format=args['format'])
 
         if args['search']:
-            query = query.join(File.tags).filter(
-                or_(File.name.contains(args['search']), Tag.name.contains(args['search'])))
+            for _str in args['search']:
+                query = query.join(File.tags).filter(
+                    or_(File.name.contains(_str), Tag.name.contains(_str)))
 
         if args['include']:
             if args['exclude']:
