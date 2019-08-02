@@ -55,6 +55,7 @@ g_file = reqparse.RequestParser()\
     .add_argument('pre_page', location='args', type=int, default=10)\
     .add_argument('public', type=int)
 
+#formdata can't be list, so here use 'split' action
 p_file = reqparse.RequestParser()\
     .add_argument('file', required=True, type=datastructures.FileStorage, location='files')\
     .add_argument('tags', action='split')\
@@ -148,3 +149,31 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower(
            ) in app.config['ALLOWED_EXTENSIONS']
+
+u_file_tags = reqparse.RequestParser()\
+    .add_argument('tags', action='append', required=True)
+
+@ns_file.route('/<int:file_id>/tags/add')
+class FileTagAddApi(Resource):
+    @api.marshal_with(m_file)
+    @permission_required()
+    def put(self, file_id):
+        args = u_file_tags.parse_args()
+        file = fileCheck(file_id)
+        for tag in args['tags']:
+            _tag = Tag.query.filter_by(name=tag).first()
+            if not _tag:
+                _tag = Tag(name=tag)
+                db.session.add(_tag)
+            if _tag not in file.tags:
+                file.tags.append(_tag)
+
+        db.session.commit()
+        return file, 200
+
+def fileCheck(file_id):
+    file = File.query.get(file_id)
+    if not file:
+        api.abort(400, "file is not exist.")
+    else:
+        return file
