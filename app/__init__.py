@@ -71,6 +71,30 @@ def fixProject():
         db.session.commit()
 
 @app.cli.command()
+def fixTag():
+    files = model.File.query.all()
+    for file in files:
+        if len(file.tags)>0:
+            print(file.id)
+            new_tags = []
+            for tag in file.tags:
+                taglist = tag.name.split(',')
+                if len(taglist)>1:
+                    for _t in taglist:
+                        _tag = model.Tag.query.filter_by(name=_t).first()
+                        if not _tag:
+                            _tag = model.Tag(name=_t)
+                            db.session.add(_tag)
+                        new_tags.append(_tag)
+                    db.session.delete(tag)
+                else:
+                    new_tags.append(tag)
+            file.tags = []
+            for n_tag in new_tags:
+                file.tags.append(n_tag)
+            db.session.commit()
+
+@app.cli.command()
 def doc():
     with app.app_context(), app.test_request_context():
         urlvars = False  # Build query strings in URLs
