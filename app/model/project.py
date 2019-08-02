@@ -114,6 +114,7 @@ class Project(db.Model):
             self.current_phase().feedback_date = datetime.utcnow()
             # craete new phase in current stage
             new_phase = Phase(
+                parent_project=self,
                 parent_stage=self.current_stage(),
                 days_need=math.floor( self.current_phase().days_need*0.2 )+1,  # 4 days later
             )
@@ -260,6 +261,7 @@ class Project(db.Model):
             db.session.add(new_stage)
             new_phase = Phase(
                 parent_stage=new_stage,
+                parent_project=new_project,
                 days_need=stage['days_need']
             )
             db.session.add(new_phase)

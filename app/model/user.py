@@ -5,6 +5,8 @@ User Role Group WxUser
 from datetime import datetime
 from werkzeug.security import generate_password_hash
 from .. import db, app
+import shortuuid
+from .misc import Option
 
 PERMISSIONS = app.config['PERMISSIONS']
 ROLE_PRESSENT = app.config['ROLE_PRESSENT']
@@ -23,11 +25,11 @@ USER_GROUP = db.Table('user_groups',
                       )
 
 GROUP_ADMIN = db.Table('group_admins',
-                      db.Column('user_id', db.Integer,
-                                db.ForeignKey('users.id')),
-                      db.Column('group_id', db.Integer,
-                                db.ForeignKey('groups.id')),
-                      )
+                       db.Column('user_id', db.Integer,
+                                 db.ForeignKey('users.id')),
+                       db.Column('group_id', db.Integer,
+                                 db.ForeignKey('groups.id')),
+                       )
 
 
 class User(db.Model):
@@ -88,19 +90,45 @@ class User(db.Model):
         """Check if user is admin or not"""
         return self.can(PERMISSIONS['ADMIN'])
 
+    def delete(self):
+        if self.wx_user:
+            db.session.delete(self.wx_user)
+        db.session.delete(self)
+        db.session.commit()
+
     @staticmethod
     def create_admin():
         """Create server's admin user. Call it on server's initiation."""
-        hashed_password = generate_password_hash(
-            app.config['ADMIN_PASS'], method='sha256')
-        new_user = User(
+        admin = User.create_user(
             login=app.config['ADMIN_LOGIN'],
-            name=app.config['ADMIN_LOGIN'],
-            password=hashed_password,
+            password=app.config['ADMIN_PASS'],
             role_id=1
         )
+        return admin
+
+    @staticmethod
+    def create_user(login=str(shortuuid.uuid()), password=str(shortuuid.uuid()), name='', role_id=3, email='', phone='', sex='unknown'):
+        option = Option.query.filter_by(name='allow_sign_in').first()
+        if option.value == '0':
+            raise Exception('Registration closed')
+
+        if not name:
+            name = login
+
+        new_user = User(
+            login=login,
+            name=name,
+            password=generate_password_hash(
+                password, method='sha256'),
+            role_id=role_id,
+            email=email,
+            phone=phone,
+            sex=sex
+        )
+
         db.session.add(new_user)
         db.session.commit()
+        return new_user
 
     def __repr__(self):
         return '<User %r>' % self.login
@@ -175,6 +203,7 @@ class Group(db.Model):
         'User', secondary=GROUP_ADMIN,
         lazy='subquery', backref=db.backref('groups_as_admin', lazy=True))
     reg_date = db.Column(db.DateTime, default=datetime.utcnow)
+
     def __repr__(self):
         return '<Group %r>' % self.name
 
@@ -194,6 +223,45 @@ class WxUser(db.Model):
     headimg_url = db.Column(db.String(512))
     unionid = db.Column(db.String(128))
     reg_date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    @staticmethod
+    def create_wx_user(data):
+        option = Option.query.filter_by(name='allow_sign_in').first()
+        if option.value == '0':
+            raise Exception('Registration closed')
+
+        new_wx_user = WxUser(
+            openid=data['openid'],
+            nickname=data['nickname'],
+            sex=data['sex'],
+            language=data['language'],
+            city=data['city'],
+            province=data['province'],
+            country=data['country'],
+            headimg_url=data['headimgurl'],
+            unionid=data['unionid']
+        )
+        db.session.add(new_wx_user)
+        # create a new account on our serves and bind it to the wechat account.
+
+        new_user = User(
+            login=str(shortuuid.uuid()),
+            name=data['nickname'],
+            password=generate_password_hash(
+                str(shortuuid.uuid()), method='sha256'),
+            wx_user=new_wx_user
+        )
+
+        db.session.add(new_user)
+        sex = 'unknown'
+        if data['sex'] == 1:
+            sex = 'male'
+        elif data['sex'] == 2:
+            sex = 'female'
+        new_user.sex = sex
+
+        db.session.commit()
+        return new_wx_user
 
     def __repr__(self):
         return '<WxUser %r>' % self.nickname

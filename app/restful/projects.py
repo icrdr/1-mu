@@ -156,9 +156,9 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.id.desc())
         elif args['order_by'] == 'title':
             if args['order'] == 'asc':
-                query = query.order_by(Project.title.asc())
+                query = query.order_by(Project.title.asc(), Project.id.asc())
             else:
-                query = query.order_by(Project.title.desc())
+                query = query.order_by(Project.title.desc(), Project.id.asc())
         elif args['order_by'] == 'start_date':
             if args['order'] == 'asc':
                 query = query.order_by(Project.start_date.asc())
@@ -166,15 +166,14 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.start_date.desc())
         elif args['order_by'] == 'status':
             if args['order'] == 'asc':
-                query = query.order_by(Project.status.asc())
+                query = query.order_by(Project.status.desc(), Project.id.asc())
             else:
-                query = query.order_by(Project.status.desc())
+                query = query.order_by(Project.status.desc(), Project.id.asc())
 
         record_query = query.paginate(
             args['page'], args['pre_page'], error_out=False)
         projects = record_query.items
         total = record_query.total
-        print(projects[0].tags)
         output = {
             'projects': projects,
             'total': total
@@ -191,8 +190,9 @@ class PorjectsApi(Resource):
             api.abort(403, "Poster must be one of the creators(Administrator privileges required).")
         if not User.query.get(args['client_id']):
             api.abort(401, "Client is not exist.")
-        if not Group.query.get(args['group_id']):
-            api.abort(401, "Group is not exist.")
+        if args['group_id'] != None:
+            if not Group.query.get(args['group_id']):
+                api.abort(401, "Group is not exist.")
         try:
             new_project = Project.create_project(
                 title=args['title'],
