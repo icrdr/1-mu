@@ -174,7 +174,6 @@ class PorjectsApi(Resource):
             args['page'], args['pre_page'], error_out=False)
         projects = record_query.items
         total = record_query.total
-        print(projects[0].tags)
         output = {
             'projects': projects,
             'total': total
