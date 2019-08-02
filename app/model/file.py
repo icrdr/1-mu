@@ -35,7 +35,7 @@ class File(db.Model):
         lazy='subquery', backref=db.backref('files', lazy=True))
 
     @staticmethod
-    def create_file(uploader_id, file, tags, public):
+    def create_file(uploader_id, file, description, tags, public):
         # filename = utils.secure_filename(file.filename)
         format = file.filename.split(".")[-1]
         rawname = file.filename[:-len(format)-1]
@@ -59,6 +59,8 @@ class File(db.Model):
             format = format,
             url = str(os.path.join(year, month, day , filename)).replace('\\', '/')
         )
+        if description:
+            new_file.description = description
 
         if public:
             new_file.public = True

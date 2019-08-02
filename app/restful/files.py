@@ -53,6 +53,7 @@ g_file = reqparse.RequestParser()\
 p_file = reqparse.RequestParser()\
     .add_argument('file', required=True, type=datastructures.FileStorage, location='files')\
     .add_argument('tags', action='append')\
+    .add_argument('description')\
     .add_argument('public', type=int, default=0)
 
 @ns_file.route('')
@@ -121,6 +122,7 @@ class UploadApi(Resource):
             new_file = File.create_file(
                     uploader_id = uploader_id,
                     file=args['file'],
+                    description=args['description'],
                     tags=args['tags'],
                     public=args['public'],
                 )
