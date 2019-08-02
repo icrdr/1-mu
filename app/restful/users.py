@@ -1,6 +1,6 @@
 from flask_restplus import Resource, reqparse, fields, marshal
 from flask import g, request
-from .. import api, db,app
+from .. import api, db, app
 from ..model import User, Group
 from ..utility import buildUrl, getAvatar
 from werkzeug.security import generate_password_hash
@@ -87,9 +87,9 @@ p_user.add_argument('login', location='args', required=True,
                     help="Login name for the user.")
 p_user.add_argument('password', location='args', required=True,
                     help="Password for the user (never included).")
-p_user.add_argument('email', location='args',
+p_user.add_argument('email', location='args', default='',
                     help="The email address for the user.")
-p_user.add_argument('phone', location='args',
+p_user.add_argument('phone', location='args', default='',
                     help="The phone number for the user.")
 
 u_user = reqparse.RequestParser()
@@ -109,6 +109,7 @@ d_user = reqparse.RequestParser()
 d_user.add_argument('user_id', location='args', action='split', required=True,
                        help="Limit result set to users matching at least one specific \
                     role provided. Accepts list or single role.")
+
 
 @n_user.route('')
 class UsersApi(Resource):
@@ -147,10 +148,10 @@ class UsersApi(Resource):
             args['page'], args['pre_page'], error_out=False)
         users = record_query.items
         total = record_query.total
-        
+
         output = {
-            'users':users,
-            'total':total
+            'users': users,
+            'total': total
         }
         return marshal(output, M_USERS), 200
 
@@ -158,32 +159,30 @@ class UsersApi(Resource):
     @api.expect(p_user)
     def post(self):
         args = p_user.parse_args()
-        if not User.query.filter_by(login=args['login']).first():
-            hashed_password = generate_password_hash(
-                args['password'], method='sha256')
-            new_user = User(
-                login=args['login'],
-                name=args['login'],
-                password=hashed_password
-            )
 
-            if args['email']:
-                if not User.query.filter_by(email=args['email']).first():
-                    new_user.email = args['email']
-                else:
-                    api.abort(400, "email already exist")
-            if args['phone']:
-                if not User.query.filter_by(phone=args['phone']).first():
-                    new_user.phone = args['phone']
-                else:
-                    api.abort(400, "phone already exist")
-
-            db.session.add(new_user)
-            db.session.commit()
-            return new_user, 201
-        else:
+        if User.query.filter_by(login=args['login']).first():
             api.abort(400, "login name already exist")
 
+        if args['email'] != None:
+            if User.query.filter_by(email=args['email']).first():
+                api.abort(400, "email already exist")
+
+        if args['phone'] != None:
+            if User.query.filter_by(phone=args['phone']).first():
+                api.abort(400, "phone already exist")
+        try:
+            new_user = User.create_user(
+                login=args['login'],
+                password=args['password'],
+                email = args['email'],
+                phone = args['phone']
+            )
+        except Exception as e:
+            print(e)
+            api.abort(400, "Failed of creating user.")
+
+        return new_user, 201
+        
     @api.marshal_with(M_USER, envelope='users')
     @api.expect(u_user)
     def put(self):
@@ -204,7 +203,7 @@ class UsersApi(Resource):
                     db.session.commit()
                 except Exception as e:
                     print(e)
-                    api.abort(400, e)         
+                    api.abort(400, e)
             return users, 200
         else:
             api.abort(400, "login name already exist")
@@ -227,24 +226,20 @@ class UsersApi(Resource):
 class UserApi(Resource):
     @api.marshal_with(M_USER)
     def get(self, user_id):
-        user = User.query.get(user_id)
-        if(user):
-            return user, 200
-        else:
-            api.abort(400, "user doesn't exist")
+        user = userCheck(user_id)
+        return user, 200
 
-#     @admin_required
-#     def delete(self, id):
-#         user = User.query.get(id)
-#         if user:
-#             db.session.delete(user)
-#             db.session.commit()
-#             return {'message': 's!'}, 200
-#         else:
-#             api.abort(400, "user doesn't exist")
-
+    @admin_required
+    def delete(self, user_id):
+        user = userCheck(user_id)
+        try:
+            user.delete()
+            return {'message': 'ok!'}, 200
+        except Exception as e:
+            print(e)
+            api.abort(400, "delete fail!")
+        
 N_GROUP = api.namespace('api/groups', description='Group Operations')
-
 
 M_GROUPS = api.model('groups', {
     'groups': fields.List(fields.Nested(M_GROUP)),
@@ -323,7 +318,7 @@ class GroupAddApi(Resource):
         return group, 200
 
 @N_GROUP.route('/<int:group_id>/remove/<int:user_id>')
-class GroupAddApi(Resource):
+class GroupRemoveApi(Resource):
     @api.marshal_with(M_GROUP)
     @permission_required()
     def put(self, group_id, user_id):
@@ -351,3 +346,10 @@ def groupCheck(group_id):
         api.abort(400, "group is not exist.")
     else:
         return group
+
+def userCheck(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        api.abort(400, "user is not exist.")
+    else:
+        return user

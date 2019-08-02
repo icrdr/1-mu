@@ -25,7 +25,10 @@ m_user = api.model('user', {
 m_preview = api.model('preview', {
     'url': fields.String(attribute=lambda x: buildUrl(x.url), description="The avatar url for the user."),
 })
-
+M_TAG = api.model('tag', {
+    'id': fields.Integer,
+    'name': fields.String,
+})
 m_file = api.model('file', {
     'id': fields.Integer(description="Unique identifier for the user."),
     'name': fields.String(description="Display name for the user."),
@@ -34,6 +37,7 @@ m_file = api.model('file', {
     'format': fields.String(description="Registration date for the user."),
     'uploader': fields.Nested(m_user),
     'previews': fields.List(fields.Nested(m_preview)),
+    'tags': fields.List(fields.Nested(M_TAG)),
     'upload_date': fields.String(description="Registration date for the user.")
 })
 
@@ -51,6 +55,7 @@ g_file = reqparse.RequestParser()\
     .add_argument('pre_page', location='args', type=int, default=10)\
     .add_argument('public', type=int)
 
+#formdata can't be list, so here use 'split' action
 p_file = reqparse.RequestParser()\
     .add_argument('file', required=True, type=datastructures.FileStorage, location='files')\
     .add_argument('tags', action='split')\
@@ -98,9 +103,9 @@ class UploadApi(Resource):
                 query = query.order_by(File.id.desc())
         elif args['order_by'] == 'name':
             if args['order'] == 'asc':
-                query = query.order_by(File.name.asc())
+                query = query.order_by(File.name.asc(), File.id.asc())
             else:
-                query = query.order_by(File.name.desc())
+                query = query.order_by(File.name.desc(), File.id.asc())
         elif args['order_by'] == 'reg_date':
             if args['order'] == 'asc':
                 query = query.order_by(File.upload_date.asc())
@@ -144,3 +149,31 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower(
            ) in app.config['ALLOWED_EXTENSIONS']
+
+u_file_tags = reqparse.RequestParser()\
+    .add_argument('tags', action='append', required=True)
+
+@ns_file.route('/<int:file_id>/tags/add')
+class FileTagAddApi(Resource):
+    @api.marshal_with(m_file)
+    @permission_required()
+    def put(self, file_id):
+        args = u_file_tags.parse_args()
+        file = fileCheck(file_id)
+        for tag in args['tags']:
+            _tag = Tag.query.filter_by(name=tag).first()
+            if not _tag:
+                _tag = Tag(name=tag)
+                db.session.add(_tag)
+            if _tag not in file.tags:
+                file.tags.append(_tag)
+
+        db.session.commit()
+        return file, 200
+
+def fileCheck(file_id):
+    file = File.query.get(file_id)
+    if not file:
+        api.abort(400, "file is not exist.")
+    else:
+        return file

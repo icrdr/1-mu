@@ -134,7 +134,7 @@ class WxAuthApi(Resource):
                     res.encoding = 'utf-8'
                     data = res.json()
                     if 'unionid' in data:
-                        return createUser(data)
+                        return accessUser(data)
                     else:
                         return data, 400
                 except Exception as e:
@@ -184,7 +184,7 @@ class WxLoginApi(Resource):
                 res.encoding = 'utf-8'
                 data = res.json()
                 if 'unionid' in data:
-                    return createUser(data)
+                    return accessUser(data)
                 else:
                     return data, 400
 
@@ -311,12 +311,11 @@ def getAccessToken():
         print(e)
         return api.abort(400, "bad connection")
 
-
-def createUser(data):
-    try:
-        wx_user = WxUser.query.filter_by(unionid=data['unionid']).first()
-        # check if the wechat unionid is already registed on our serves
-        if wx_user:  # if so, update his info
+def accessUser(data):
+    wx_user = WxUser.query.filter_by(unionid=data['unionid']).first()
+    # check if the wechat unionid is already registed on our serves
+    if wx_user:  # if so, update his info
+        try:
             wx_user.openid = data['openid'],
             wx_user.nickname = data['nickname'],
             wx_user.sex = data['sex'],
@@ -326,46 +325,23 @@ def createUser(data):
             wx_user.country = data['country'],
             wx_user.headimg_url = data['headimgurl'],
             wx_user.unionid = data['unionid']
-        else:  # otherwise, create a new one
-            new_wx_user = WxUser(
-                openid=data['openid'],
-                nickname=data['nickname'],
-                sex=data['sex'],
-                language=data['language'],
-                city=data['city'],
-                province=data['province'],
-                country=data['country'],
-                headimg_url=data['headimgurl'],
-                unionid=data['unionid']
-            )
-            db.session.add(new_wx_user)
+            db.session.commit()
+        except Exception as e:
+            print(e)
+            api.abort(400, "update user failed")
+    else:  # otherwise, create a new one
+        try:
+            wx_user = WxUser.create_wx_user(data)
+        except Exception as e:
+            print(e)
+            api.abort(400, "create user failed")
 
-            # create a new account on our serves and bind it to the wechat account.
-            new_user = User(
-                login=str(shortuuid.uuid()),
-                name=data['nickname'],
-                password=generate_password_hash(
-                    str(shortuuid.uuid()), method='sha256'),
-                wx_user=new_wx_user
-            )
-            
-            db.session.add(new_user)
-            sex = 'unknown'
-            if data['sex'] == 1:
-                sex = 'male'
-            elif data['sex'] == 2:
-                sex = 'female'
-            new_user.sex = sex
-            wx_user = new_wx_user
+    # generate a jwt based on user id
+    token = jwt.encode({'id': wx_user.bind_user_id, 'exp': datetime.utcnow(
+    )+timedelta(days=24)}, app.config['SECRET_KEY'])
 
-        db.session.commit()
-        # generate a jwt based on user id
-        token = jwt.encode({'id': wx_user.bind_user_id, 'exp': datetime.utcnow(
-        )+timedelta(days=24)}, app.config['SECRET_KEY'])
-        return {
-            'token': token.decode('UTF-8'),
-            'wx_info': data
-        }, 200
-    except Exception as e:
-        print(e)
-        api.abort(400, "create user failed")
+    return {
+        'token': token.decode('UTF-8'),
+        'wx_info': data
+    }, 200
+    
