@@ -53,7 +53,7 @@ g_file = reqparse.RequestParser()\
 
 p_file = reqparse.RequestParser()\
     .add_argument('file', required=True, type=datastructures.FileStorage, location='files')\
-    .add_argument('tags', action='append')\
+    .add_argument('tags', action='split')\
     .add_argument('description')\
     .add_argument('public', type=int, default=0)
 
