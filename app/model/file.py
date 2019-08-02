@@ -37,7 +37,7 @@ class File(db.Model):
     @staticmethod
     def create_file(uploader_id, file, description, tags, public):
         # filename = utils.secure_filename(file.filename)
-        format = file.filename.split(".")[-1]
+        format = file.filename.split(".")[-1].lower()
         rawname = file.filename[:-len(format)-1]
 
         date = datetime.utcnow().strftime("%Y%m%d")
