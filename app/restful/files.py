@@ -6,7 +6,8 @@ from ..model import File, Stage, Preview, Tag, User, Group
 from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
 from datetime import datetime
-import os, shortuuid
+import os
+import shortuuid
 from ..utility import buildUrl, getAvatar
 from psd_tools import PSDImage
 from PIL import Image
@@ -45,22 +46,23 @@ g_file = reqparse.RequestParser()\
     .add_argument('user_id', location='args', action='split')\
     .add_argument('group_id', location='args', action='split')\
     .add_argument('search', location='args', action='split')\
-    .add_argument('format', location='args',choices=['png', 'jpg', 'jpeg', 'txt', 'pdf', 'gif'])\
+    .add_argument('format', location='args', choices=['png', 'jpg', 'jpeg', 'txt', 'pdf', 'gif'])\
     .add_argument('include', location='args', action='split')\
     .add_argument('exclude', location='args', action='split')\
-    .add_argument('order', location='args', default='asc',choices=['asc', 'desc'])\
+    .add_argument('order', location='args', default='asc', choices=['asc', 'desc'])\
     .add_argument('order_by', location='args', default='id',
-                    choices=['id', 'name', 'reg_date'])\
+                  choices=['id', 'name', 'reg_date'])\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=10)\
     .add_argument('public', type=int)
 
-#formdata can't be list, so here use 'split' action
+# formdata can't be list, so here use 'split' action
 p_file = reqparse.RequestParser()\
     .add_argument('file', required=True, type=datastructures.FileStorage, location='files')\
     .add_argument('tags', action='split')\
     .add_argument('description')\
     .add_argument('public', type=int, default=0)
+
 
 @ns_file.route('')
 class UploadApi(Resource):
@@ -85,9 +87,10 @@ class UploadApi(Resource):
             query = query.filter_by(format=args['format'])
 
         if args['search']:
-            for _str in args['search']:
-                query = query.join(File.tags).filter(
-                    or_(File.name.contains(_str), Tag.name.contains(_str)))
+            query = query.join(File.tags).filter(
+                or_(File.name.in_(args['search']),
+                    Tag.name.in_(args['search']))
+            )
 
         if args['include']:
             if args['exclude']:
@@ -125,33 +128,35 @@ class UploadApi(Resource):
 
         if not allowed_file(args['file'].filename):
             api.abort(400, "file format not allowed!")
-        
+
         uploader_id = 1
         if 'current_user' in g:
             uploader_id = g.current_user.id
-        
+
         try:
             new_file = File.create_file(
-                    uploader_id = uploader_id,
-                    file=args['file'],
-                    description=args['description'],
-                    tags=args['tags'],
-                    public=args['public'],
-                )
+                uploader_id=uploader_id,
+                file=args['file'],
+                description=args['description'],
+                tags=args['tags'],
+                public=args['public'],
+            )
         except Exception as e:
             print(e)
-            api.abort(500, '[Sever Error]: '+ str(e))
+            api.abort(500, '[Sever Error]: ' + str(e))
 
         return new_file, 200
-            
+
 
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower(
            ) in app.config['ALLOWED_EXTENSIONS']
 
+
 u_file_tags = reqparse.RequestParser()\
     .add_argument('tags', action='append', required=True)
+
 
 @ns_file.route('/<int:file_id>/tags/add')
 class FileTagAddApi(Resource):
@@ -170,6 +175,7 @@ class FileTagAddApi(Resource):
 
         db.session.commit()
         return file, 200
+
 
 def fileCheck(file_id):
     file = File.query.get(file_id)
