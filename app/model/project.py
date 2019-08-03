@@ -116,7 +116,7 @@ class Project(db.Model):
             new_phase = Phase(
                 parent_project=self,
                 parent_stage=self.current_stage(),
-                days_need=math.floor( self.current_phase().days_need*0.2 )+1,  # 4 days later
+                days_need=math.floor( self.current_stage().phases[0].days_need*0.2 )+1,  # 4 days later
             )
             db.session.add(new_phase)
 
