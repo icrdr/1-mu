@@ -310,7 +310,7 @@ class PorjectUploadApi(Resource):
         for upload_file in args['upload_files']:
             if not File.query.get(upload_file['id']):
                 api.abort(401, "File is not exist.")
-        if project.status != 'modify' and project.status != 'progress':
+        if project.status != 'modify' and project.status != 'progress' and project.status != 'delay':
             api.abort(
                 401, "Creator can upload only during 'modify' or 'progress'.")
         if not g.current_user.can(PERMISSIONS['EDIT']):
@@ -368,7 +368,7 @@ class PorjectPostponeApi(Resource):
     def put(self, project_id):
         args = POSTPONE_PROJECT.parse_args()
         project = Project.query.get(project_id)
-        if project.status != 'modify' and project.status != 'progress':
+        if project.status != 'modify' and project.status != 'progress' and project.status != 'delay':
             api.abort(
                 401, "Creator can upload only during 'modify' or 'progress'.")
         if not g.current_user.can(PERMISSIONS['EDIT']):

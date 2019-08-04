@@ -187,9 +187,13 @@ class Project(db.Model):
             else:
                 self.status = 'progress'
             # create a new delay counter
+            if len(self.current_stage().phases) > 1:
+                last_start_date = self.current_stage().phases[-2].feedback_date
+            else:
+                last_start_date = self.current_stage().start_date
             addDelayCounter(
                 self.id, self.current_phase().days_need,
-                offset = self.current_stage().start_date - self.last_pause_date
+                offset = last_start_date - self.last_pause_date
             )
         else:
             self.status = 'await'
