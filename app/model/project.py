@@ -188,11 +188,27 @@ class Project(db.Model):
                 self.status = 'progress'
             # create a new delay counter
             addDelayCounter(
-                self.current_stage().id, self.current_phase().days_need,
-                offset=self.current_stage().start_date - self.last_pause_date
+                self.id, self.current_phase().days_need,
+                offset = self.current_stage().start_date - self.last_pause_date
             )
         else:
             self.status = 'await'
+        db.session.commit()
+        return self
+
+    def postpone(self, days):
+        """postpone this stage."""
+        # current phase update
+        self.current_phase().days_need += days 
+        # create a new delay counter
+        if len(self.current_stage().phases) > 1:
+            last_start_date = self.current_stage().phases[-2].feedback_date
+        else:
+            last_start_date = self.current_stage().start_date
+        addDelayCounter(
+            self.id, self.current_phase().days_need,
+            offset = last_start_date - datetime.utcnow()
+        )
         db.session.commit()
         return self
 
@@ -365,6 +381,7 @@ def delay(project_id):
 def addDelayCounter(project_id, days_need, offset=timedelta(microseconds=0)):
 
     deadline = datetime.utcnow()+timedelta(days=days_need) + offset
+    print(deadline)
     scheduler.add_job(
         id='delay_project_' + str(project_id),
         func=delay,

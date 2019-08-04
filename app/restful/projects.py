@@ -357,6 +357,31 @@ class PorjectModifyApi(Resource):
         except Exception as error:
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
+            
+POSTPONE_PROJECT = reqparse.RequestParser()\
+    .add_argument('days', type=int, required=True)
+
+@N_PROJECT.route('/<int:project_id>/postpone')
+class PorjectPostponeApi(Resource):
+    @api.marshal_with(M_PROJECT)
+    @permission_required()
+    def put(self, project_id):
+        args = POSTPONE_PROJECT.parse_args()
+        project = Project.query.get(project_id)
+        if project.status != 'modify' and project.status != 'progress':
+            api.abort(
+                401, "Creator can upload only during 'modify' or 'progress'.")
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            if g.current_user.id != project.client_user_id:
+                api.abort(
+                    403, "Only the project's client can feedback(Administrator privileges required).")
+
+        try:
+            project.postpone(args['days'])
+            return project, 201
+        except Exception as error:
+            print(error)
+            api.abort(500, '[Sever Error]: ' + str(error))
 
 
 @N_PROJECT.route('/<int:project_id>/finish')
