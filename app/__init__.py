@@ -8,7 +8,7 @@ import os
 import redis
 from pytz import utc
 from apscheduler.schedulers.background import BackgroundScheduler
-
+from datetime import timedelta
 app = Flask(__name__)
 app.config.from_object(config[os.environ.get('FLASK_ENV')])
 
@@ -68,6 +68,16 @@ def fixProject():
         print(phase.id)
         if not phase.parent_project_id:
             phase.parent_project_id = phase.parent_stage.parent_project_id
+        stage = phase.parent_stage
+        if stage.start_date:
+            if stage.phases.index(phase) == 0:
+                phase_start_date = stage.start_date
+            else:
+                index = stage.phases.index(phase) - 1
+                phase_start_date = stage.phases[index].feedback_date
+            phase.start_date = phase_start_date
+            phase.deadline_date = phase_start_date + timedelta(days=phase.days_need)
+
         db.session.commit()
 
 @app.cli.command()

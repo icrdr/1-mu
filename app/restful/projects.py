@@ -47,16 +47,25 @@ M_TAG = api.model('tag', {
     'name': fields.String,
 })
 
+M_PAUSE = api.model('pause', {
+    'id': fields.Integer,
+    'pause_date': fields.String,
+    'resume_date': fields.String,
+})
+
 M_PHASE = api.model('phase', {
     'id': fields.Integer,
     'days_need': fields.Integer,
     'upload_date': fields.String,
     'feedback_date': fields.String,
+    'start_date': fields.String,
+    'deadline_date': fields.String,
     'creator_upload': fields.String,
     'creator': fields.Nested(M_UPLOADER),
     'client': fields.Nested(M_UPLOADER),
     'client_feedback': fields.String,
-    'upload_files': fields.List(fields.Nested(M_FILE))
+    'upload_files': fields.List(fields.Nested(M_FILE)),
+    'pauses': fields.List(fields.Nested(M_PAUSE))
 })
 
 M_STAGE = api.model('stage', {
@@ -75,6 +84,7 @@ M_PROJECT = api.model('project', {
     'id': fields.Integer,
     'title': fields.String,
     'design': fields.String,
+    'remark': fields.String,
     'status': fields.String,
     'creator_group': fields.Nested(M_GROUP),
     'client': fields.Nested(M_CLIENT),
@@ -216,8 +226,8 @@ UPDATE_PROJECT = reqparse.RequestParser()\
     .add_argument('group_id', type=int)\
     .add_argument('client_id', type=int, )\
     .add_argument('design')\
+    .add_argument('remark')\
     .add_argument('files', type=int, action='append')
-
 
 
 @N_PROJECT.route('/<int:project_id>')
@@ -251,6 +261,8 @@ class PorjectApi(Resource):
                 project.title = args['title']
             if args['design'] != None:
                 project.design = args['design']
+            if args['remark'] != None:
+                project.remark = args['remark']
             if args['group_id']:
                 project.creator_group_id = args['group_id']
             
@@ -455,6 +467,37 @@ class PorjectAbnormalApi(Resource):
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
+@N_PROJECT.route('/<int:project_id>/pause')
+class PorjectPauseApi(Resource):
+    @api.marshal_with(M_PROJECT)
+    @permission_required()
+    def put(self, project_id):
+        project = Project.query.get(project_id)
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            api.abort(
+                403, "Administrator privileges required for request update action.")
+        try:
+            project.pause()
+            return project, 201
+        except Exception as error:
+            print(error)
+            api.abort(500, '[Sever Error]: ' + str(error))
+
+@N_PROJECT.route('/<int:project_id>/back')
+class PorjectgoBackApi(Resource):
+    @api.marshal_with(M_PROJECT)
+    @permission_required()
+    def put(self, project_id):
+        project = Project.query.get(project_id)
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            api.abort(
+                403, "Administrator privileges required for request update action.")
+        try:
+            project.goBack()
+            return project, 201
+        except Exception as error:
+            print(error)
+            api.abort(500, '[Sever Error]: ' + str(error))
 
 def projectCheck(project_id):
     project = Project.query.get(project_id)
