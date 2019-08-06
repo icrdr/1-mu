@@ -50,6 +50,11 @@ class Project(db.Model):
     client_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     client = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
         'projects_as_client', lazy=True))
+
+    creator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    creator = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
+        'projects_as_creator', lazy=True))
+
     # many-many: User.projects-Project.creators
     creator_group_id = db.Column(db.Integer, db.ForeignKey('groups.id'))
     creator_group = db.relationship('Group', foreign_keys=creator_group_id, backref=db.backref(
@@ -296,30 +301,31 @@ class Project(db.Model):
         print('all project deleted.')
 
     @staticmethod
-    def create_project(title, client_id, creators, group_id, design, stages, tags, files, confirm):
+    def create_project(title, client_id, creator_id, design, stages, tags, files, confirm):
         """Create new project."""
         # create project
         new_project = Project(
             title=title,
             client_user_id=client_id,
+            creator_user_id=creator_id,
             design=design
         )
         db.session.add(new_project)
 
-        if group_id:
-            new_project.creator_group_id = group_id
-        else:
-            new_group = Group(
-                name=title+'制作小组',
-                description=title
-            )
-            db.session.add(new_group)
-            for creator_id in creators:
-                creator = User.query.get(creator_id)
-                new_group.users.append(creator)
-            new_group.admins.append(User.query.get(creators[0]))
+        # if group_id:
+        #     new_project.creator_group_id = group_id
+        # else:
+        #     new_group = Group(
+        #         name=title+'制作小组',
+        #         description=title
+        #     )
+        #     db.session.add(new_group)
+        #     for creator_id in creators:
+        #         creator = User.query.get(creator_id)
+        #         new_group.users.append(creator)
+        #     new_group.admins.append(User.query.get(creators[0]))
 
-            new_project.creator_group = new_group
+        #     new_project.creator_group = new_group
 
         # create stage
         for stage in stages:
@@ -415,7 +421,7 @@ class Phase(db.Model):
         
 class PhasePause(db.Model):
     """Phase pauseModel"""
-    __tablename__ = 'phasePause'
+    __tablename__ = 'phase_pauses'
     id = db.Column(db.Integer, primary_key=True)
     pause_date = db.Column(db.DateTime)
     resume_date = db.Column(db.DateTime)

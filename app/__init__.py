@@ -79,6 +79,15 @@ def fixProject():
             phase.deadline_date = phase_start_date + timedelta(days=phase.days_need)
 
         db.session.commit()
+        
+@app.cli.command()
+def fixCreator():
+    projects = model.Project.query.all()
+    for project in projects:
+        print(project.id)
+        if project.creator_group:
+            project.creator_user_id = project.creator_group.admins[0].id
+        db.session.commit()
 
 @app.cli.command()
 def fixTag():
