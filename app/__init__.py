@@ -90,7 +90,7 @@ def fixCreator():
             for phase in project.phases:
                 if phase.creator_user_id:
                     project.creator_user_id = phase.creator_user_id
-                
+        print(project.creator)
         db.session.commit()
 
 @app.cli.command()
