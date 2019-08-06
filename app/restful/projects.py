@@ -86,7 +86,7 @@ M_PROJECT = api.model('project', {
     'design': fields.String,
     'remark': fields.String,
     'status': fields.String,
-    'creator_group': fields.Nested(M_GROUP),
+    'creator': fields.Nested(M_CREATOR),
     'client': fields.Nested(M_CLIENT),
     'public_date': fields.String,
     'start_date': fields.String,
@@ -133,8 +133,7 @@ class PorjectsApi(Resource):
         args = GET_PROJECT.parse_args()
         query = Project.query
         if args['creator_id']:
-            query = query.join(Project.creator_group).join(Group.users).filter(
-                User.id.in_(args['creator_id']))
+            query = query.filter(Project.creator_user_id.in_(args['creator_id']))
 
         if args['group_id']:
             query = query.filter(Project.creator_group_id.in_(args['group_id']))
@@ -207,8 +206,7 @@ class PorjectsApi(Resource):
             new_project = Project.create_project(
                 title=args['title'],
                 client_id=args['client_id'],
-                creators=args['creators'],
-                group_id=args['group_id'],
+                creator_id=args['creator_id'],
                 design=args['design'],
                 stages=args['stages'],
                 tags=args['tags'],
@@ -224,6 +222,7 @@ class PorjectsApi(Resource):
 UPDATE_PROJECT = reqparse.RequestParser()\
     .add_argument('title')\
     .add_argument('group_id', type=int)\
+    .add_argument('creator_id', type=int)\
     .add_argument('client_id', type=int, )\
     .add_argument('design')\
     .add_argument('remark')\
@@ -246,6 +245,9 @@ class PorjectApi(Resource):
         if args['client_id']:
             if not User.query.get(args['client_id']):
                 api.abort(401, "Client is not exist.")
+        if args['creator_id']:
+            if not User.query.get(args['creator_id']):
+                api.abort(401, "creator is not exist.")
         if args['group_id']:
             if not Group.query.get(args['group_id']):
                 api.abort(401, "Group is not exist.")
@@ -257,6 +259,8 @@ class PorjectApi(Resource):
         try:
             if args['client_id'] != None:
                 project.client_user_id = args['client_id']
+            if args['creator_id'] != None:
+                project.client_user_id = args['creator_id']
             if args['title'] != None:
                 project.title = args['title']
             if args['design'] != None:
