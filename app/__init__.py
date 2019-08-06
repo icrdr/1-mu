@@ -86,10 +86,11 @@ def fixCreator():
     for project in projects:
         print(project.id)
         if project.creator_group:
-            if project.current_phase().creator_user_id:
-                project.creator_user_id = project.current_phase().creator_user_id
-            else:
-                project.creator_user_id = project.creator_group.admins[0].id
+            project.creator_user_id = project.creator_group.admins[0].id
+            for phase in project.phases:
+                if phase.creator_user_id:
+                    project.creator_user_id = phase.creator_user_id
+                
         db.session.commit()
 
 @app.cli.command()
