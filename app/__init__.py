@@ -8,7 +8,7 @@ import os
 import redis
 from pytz import utc
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import timedelta
+from datetime import timedelta, datetime
 app = Flask(__name__)
 app.config.from_object(config[os.environ.get('FLASK_ENV')])
 
@@ -92,6 +92,20 @@ def fixCreator():
                     project.creator_user_id = phase.creator_user_id
         print(project.creator)
         db.session.commit()
+
+@app.cli.command()
+def fixDiscard():
+    projects = model.Project.query.all()
+    for project in projects:
+        if project.status == 'discard' or project.status == 'pause' or project.status == 'abnormal':
+            print(project)
+            if len(project.current_phase().pauses)==0:
+                new_pause = model.PhasePause(
+                    pause_date = datetime.utcnow()
+                )
+                db.session.add(new_pause)
+                project.current_phase().pauses.append(new_pause)
+            db.session.commit()
 
 @app.cli.command()
 def fixTag():
