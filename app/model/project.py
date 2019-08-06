@@ -52,7 +52,7 @@ class Project(db.Model):
         'projects_as_client', lazy=True))
 
     creator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    creator = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
+    creator = db.relationship('User', foreign_keys=creator_user_id, backref=db.backref(
         'projects_as_creator', lazy=True))
 
     # many-many: User.projects-Project.creators

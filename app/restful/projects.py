@@ -117,7 +117,7 @@ GET_PROJECT = reqparse.RequestParser()\
 POST_PROJECT = reqparse.RequestParser()\
     .add_argument('title', required=True)\
     .add_argument('group_id', type=int)\
-    .add_argument('creators', type=int, action='append')\
+    .add_argument('creator_id', type=int, required=True)\
     .add_argument('client_id', type=int, required=True)\
     .add_argument('design', required=True)\
     .add_argument('stages', type=list, location='json', required=True)\
@@ -167,7 +167,7 @@ class PorjectsApi(Resource):
             if args['order'] == 'asc':
                 query = query.order_by(Project.title.asc(), Project.id.asc())
             else:
-                query = query.order_by(Project.title.desc(), Project.id.asc())
+                query = query.order_by(Project.title.desc(), Project.id.desc())
         elif args['order_by'] == 'start_date':
             if args['order'] == 'asc':
                 query = query.order_by(Project.start_date.asc())
@@ -175,9 +175,9 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.start_date.desc())
         elif args['order_by'] == 'status':
             if args['order'] == 'asc':
-                query = query.order_by(Project.status.desc(), Project.id.asc())
+                query = query.order_by(Project.status.asc(), Project.id.asc())
             else:
-                query = query.order_by(Project.status.desc(), Project.id.asc())
+                query = query.order_by(Project.status.desc(), Project.id.desc())
 
         record_query = query.paginate(
             args['page'], args['pre_page'], error_out=False)
@@ -247,7 +247,7 @@ class PorjectApi(Resource):
                 api.abort(401, "Client is not exist.")
         if args['creator_id']:
             if not User.query.get(args['creator_id']):
-                api.abort(401, "creator is not exist.")
+                api.abort(401, "Creator is not exist.")
         if args['group_id']:
             if not Group.query.get(args['group_id']):
                 api.abort(401, "Group is not exist.")
@@ -260,7 +260,7 @@ class PorjectApi(Resource):
             if args['client_id'] != None:
                 project.client_user_id = args['client_id']
             if args['creator_id'] != None:
-                project.client_user_id = args['creator_id']
+                project.creator_user_id = args['creator_id']
             if args['title'] != None:
                 project.title = args['title']
             if args['design'] != None:
@@ -275,8 +275,9 @@ class PorjectApi(Resource):
                 for file_id in args['files']:
                     file = File.query.get(file_id)
                     project.files.append(file)
-
+            
             db.session.commit()
+            print(project.creator_user_id)
             return project, 201
         except Exception as error:
             print(error)
