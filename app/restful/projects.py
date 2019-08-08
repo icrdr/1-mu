@@ -251,10 +251,6 @@ class PorjectApi(Resource):
         if args['group_id']:
             if not Group.query.get(args['group_id']):
                 api.abort(401, "Group is not exist.")
-        if not g.current_user.can(PERMISSIONS['EDIT']):
-            if (not g.current_user in project.creator_group.users) or (project.status != 'await'):
-                api.abort(
-                    403, "Administrator privileges required for request update action.")
 
         try:
             if args['client_id'] != None:
@@ -267,8 +263,6 @@ class PorjectApi(Resource):
                 project.design = args['design']
             if args['remark'] != None:
                 project.remark = args['remark']
-            if args['group_id']:
-                project.creator_group_id = args['group_id']
             
             if args['files']:
                 project.files = []
@@ -331,7 +325,7 @@ class PorjectUploadApi(Resource):
             api.abort(
                 401, "Creator can upload only during 'modify' or 'progress'.")
         if not g.current_user.can(PERMISSIONS['EDIT']):
-            if not g.current_user in project.creator_group.users:
+            if g.current_user.id != project.creator_user_id:
                 api.abort(
                     403, "Only the project's creator can upload(Administrator privileges required).")
         try:
