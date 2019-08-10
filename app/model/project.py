@@ -103,7 +103,6 @@ class Project(db.Model):
         # start project
         self.status = 'progress'
         self.start_date = datetime.utcnow()
-        self.current_stage().start_date = datetime.utcnow()
         self.current_phase().start_date = datetime.utcnow()
         deadline = datetime.utcnow() + timedelta(days=self.current_phase().days_need)
         self.current_phase().deadline_date = deadline
