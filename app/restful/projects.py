@@ -106,6 +106,7 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('client_id', location='args', action='split')\
     .add_argument('title', location='args', action='split')\
     .add_argument('search', location='args')\
+    .add_argument('tags', location='args', action='split')\
     .add_argument('status', location='args', action='split')\
     .add_argument('include', location='args', action='split')\
     .add_argument('exclude', location='args', action='split')\
@@ -150,6 +151,9 @@ class PorjectsApi(Resource):
         if args['search']:
             query = query.join(Project.tags).filter(
                 or_(Project.title.contains(args['search']), Tag.name.contains(args['search'])))
+                
+        if args['tags']:
+            query = query.join(Project.tags).filter(Tag.name.in_(args['tags']))
 
         if args['include']:
             if args['exclude']:
