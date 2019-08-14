@@ -32,6 +32,7 @@ M_GROUP_MIN = api.model('group_min)', {
     'id': fields.Integer(),
     'name': fields.String(),
 })
+
 M_USER = api.model('user', {
     'id': fields.Integer(description="Unique identifier for the user."),
     'name': fields.String(description="Display name for the user."),
@@ -245,6 +246,7 @@ M_GROUPS = api.model('groups', {
     'groups': fields.List(fields.Nested(M_GROUP)),
     'total': fields.Integer(description="Unique identifier for the user."),
 })
+
 G_GROUP = reqparse.RequestParser()\
     .add_argument('include', location='args', action='split')\
     .add_argument('exclude', location='args', action='split')\
@@ -252,6 +254,12 @@ G_GROUP = reqparse.RequestParser()\
     .add_argument('order_by', location='args', default='id',choices=['id', 'name', 'reg_date'])\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=10)
+
+P_GROUP = reqparse.RequestParser()\
+    .add_argument('name', required=True)\
+    .add_argument('description')\
+    .add_argument('admin_id', action='append')\
+    .add_argument('user_id', action='append')
 
 @N_GROUP.route('')
 class GroupsApi(Resource):
@@ -295,8 +303,34 @@ class GroupsApi(Resource):
         }
         return marshal(output, M_GROUPS), 200
 
+    @api.marshal_with(M_GROUP)
+    @permission_required()
+    def post(self):
+        args = P_GROUP.parse_args()
+
+        for _id in args['admin_id']:
+            if not User.query.get(_id):
+                api.abort(401, "Admin is not exist.")
+
+        for _id in args['user_id']:
+            if not User.query.get(_id):
+                api.abort(401, "User is not exist.")
+
+        try:
+            new_group = Group.create_group(
+                name=args['name'],
+                description=args['description'],
+                admin_id=args['admin_id'],
+                user_id=args['user_id'],
+            )
+            return new_group, 201
+        except Exception as error:
+            print(error)
+            api.abort(500, '[Sever Error]: ' + str(error))
+
+
 @N_GROUP.route('/<int:group_id>/add/<int:user_id>')
-class GroupAddApi(Resource):
+class GroupAddUserApi(Resource):
     @api.marshal_with(M_GROUP)
     @permission_required()
     def put(self, group_id, user_id):
@@ -318,7 +352,7 @@ class GroupAddApi(Resource):
         return group, 200
 
 @N_GROUP.route('/<int:group_id>/remove/<int:user_id>')
-class GroupRemoveApi(Resource):
+class GroupRemoveUserApi(Resource):
     @api.marshal_with(M_GROUP)
     @permission_required()
     def put(self, group_id, user_id):
@@ -339,6 +373,14 @@ class GroupRemoveApi(Resource):
 
         db.session.commit()
         return group, 200
+
+@N_GROUP.route('/<int:group_id>')
+class GroupRemoveApi(Resource):
+    @permission_required()
+    def delete(self, group_id):
+        group = groupCheck(group_id)
+        group.delete()
+        return {'message': 'ok'}, 204
 
 def groupCheck(group_id):
     group = Group.query.get(group_id)

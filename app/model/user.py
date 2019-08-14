@@ -204,6 +204,29 @@ class Group(db.Model):
         lazy='subquery', backref=db.backref('groups_as_admin', lazy=True))
     reg_date = db.Column(db.DateTime, default=datetime.utcnow)
 
+    def delete(self):
+        """Delte this project."""
+        db.session.delete(self)
+        db.session.commit()
+
+    @staticmethod
+    def create_group(name, description, admin_id, user_id):
+        """Create new group."""
+        # create project
+        new_group = Group(
+            name=name,
+            description=description
+        )
+        db.session.add(new_group)
+
+        for _id in admin_id:
+            new_group.admins.append(User.query.get(_id))
+        for _id in user_id:
+            new_group.users.append(User.query.get(_id))
+
+        db.session.commit()
+        return new_group
+
     def __repr__(self):
         return '<Group %r>' % self.name
 

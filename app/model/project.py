@@ -290,7 +290,6 @@ class Project(db.Model):
         db.session.delete(self)
         removeDelayCounter(self.id)
         db.session.commit()
-        return self
 
     @staticmethod
     def delete_all_project():
@@ -463,7 +462,7 @@ def addDelayCounter(project_id, deadline):
         trigger='date',
         run_date=deadline,
         replace_existing=True,
-        misfire_grace_time= 86400
+        misfire_grace_time=2592000
     )
     print('addCounter: '+str(project_id))
 

@@ -113,7 +113,7 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=10)\
     .add_argument('order', location='args', default='asc', choices=['asc', 'desc'])\
-    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date','status'])
+    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date','status','creator_id','client_id','current_stage_index'])
 
 POST_PROJECT = reqparse.RequestParser()\
     .add_argument('title', required=True)\
@@ -167,21 +167,42 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.id.asc())
             else:
                 query = query.order_by(Project.id.desc())
+
         elif args['order_by'] == 'title':
             if args['order'] == 'asc':
-                query = query.order_by(Project.title.asc(), Project.id.asc())
+                query = query.order_by(Project.title.asc(), Project.id.desc())
             else:
                 query = query.order_by(Project.title.desc(), Project.id.desc())
+                
         elif args['order_by'] == 'start_date':
             if args['order'] == 'asc':
                 query = query.order_by(Project.start_date.asc())
             else:
                 query = query.order_by(Project.start_date.desc())
+
         elif args['order_by'] == 'status':
             if args['order'] == 'asc':
-                query = query.order_by(Project.status.asc(), Project.id.asc())
+                query = query.order_by(Project.status.asc(), Project.id.desc())
             else:
                 query = query.order_by(Project.status.desc(), Project.id.desc())
+
+        elif args['order_by'] == 'current_stage_index':
+            if args['order'] == 'asc':
+                query = query.order_by(Project.current_stage_index.asc(), Project.status.desc(), Project.id.desc())
+            else:
+                query = query.order_by(Project.current_stage_index.desc(), Project.status.desc(), Project.id.desc())
+
+        elif args['order_by'] == 'creator_id':
+            if args['order'] == 'asc':
+                query = query.join(Project.creator).order_by(User.id.asc(), Project.status.desc(), Project.id.desc())
+            else:
+                query = query.join(Project.creator).order_by(User.id.desc(), Project.status.desc(), Project.id.desc())
+
+        elif args['order_by'] == 'client_id':
+            if args['order'] == 'asc':
+                query = query.join(Project.client).order_by(User.id.asc(), Project.status.desc(), Project.id.desc())
+            else:
+                query = query.join(Project.client).order_by(User.id.desc(), Project.status.desc(), Project.id.desc())
 
         record_query = query.paginate(
             args['page'], args['pre_page'], error_out=False)
@@ -203,9 +224,9 @@ class PorjectsApi(Resource):
             api.abort(403, "Poster must be one of the creators(Administrator privileges required).")
         if not User.query.get(args['client_id']):
             api.abort(401, "Client is not exist.")
-        if args['group_id'] != None:
-            if not Group.query.get(args['group_id']):
-                api.abort(401, "Group is not exist.")
+        if not User.query.get(args['creator_id']):
+            api.abort(401, "Creator is not exist.")
+
         try:
             new_project = Project.create_project(
                 title=args['title'],
