@@ -2,6 +2,7 @@ from flask import Flask, json
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from celery import Celery
 from flask_migrate import Migrate, init as db_init, migrate as db_migrate, upgrade as db_upgrade
 from config import config
 import os
@@ -20,6 +21,9 @@ migrate = Migrate(app, db)
 scheduler = BackgroundScheduler()
 scheduler.configure(jobstores=app.config['SCHEDULER_JOBSTORES'], timezone=utc)
 scheduler.start()
+
+celery = Celery(app.name, broker=app.config['CELERY_BROKER_URL'])
+celery.conf.update(app.config)
 
 # Redis
 r_db = redis.Redis(host='localhost', port=6379, db=0)

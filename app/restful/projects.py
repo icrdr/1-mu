@@ -8,6 +8,7 @@ from .. import api, app, db
 from ..model import Stage, Phase, User, File, Project, Tag, Group
 from ..utility import buildUrl, getAvatar
 from .decorator import permission_required, admin_required
+import time
 
 PERMISSIONS = app.config['PERMISSIONS']
 
@@ -473,7 +474,6 @@ class PorjectResumeApi(Resource):
         except Exception as error:
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
-
 
 @N_PROJECT.route('/<int:project_id>/abnormal')
 class PorjectAbnormalApi(Resource):

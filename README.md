@@ -75,3 +75,12 @@ collation-server = utf8mb4_unicode_ci
 init_connect='SET NAMES utf8mb4'
 ```
 `sudo service mysql restart` restart
+
+
+`celery -A app.celery worker -l info -P gevent` win10
+`celery -A app.celery worker -l info` ubuntu
+
+screen -S [name]
+exit
+
+screen -r [name]
