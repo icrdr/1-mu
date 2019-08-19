@@ -3,12 +3,13 @@ Project Api
 """
 from flask_restplus import Resource, reqparse, fields, marshal
 from flask import g
-from sqlalchemy import or_, case
+from sqlalchemy import or_, case, and_
 from .. import api, app, db
 from ..model import Stage, Phase, User, File, Project, Tag, Group
 from ..utility import buildUrl, getAvatar
 from .decorator import permission_required, admin_required
 import time
+from datetime import datetime
 
 PERMISSIONS = app.config['PERMISSIONS']
 
@@ -105,9 +106,11 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('creator_id', location='args', action='split')\
     .add_argument('group_id', location='args', action='split')\
     .add_argument('client_id', location='args', action='split')\
-    .add_argument('title', location='args', action='split')\
+    .add_argument('title', location='args')\
     .add_argument('search', location='args')\
     .add_argument('tags', location='args', action='split')\
+    .add_argument('start_date', location='args', action='split')\
+    .add_argument('current_stage_index', location='args', action='split')\
     .add_argument('status', location='args', action='split')\
     .add_argument('include', location='args', action='split')\
     .add_argument('exclude', location='args', action='split')\
@@ -144,10 +147,16 @@ class PorjectsApi(Resource):
             query = query.filter(Project.client_user_id.in_(args['client_id']))
 
         if args['title']:
-            query = query.filter(Project.title.in_(args['title']))
+            query = query.filter(Project.title.contains(args['title']))
 
         if args['status']:
             query = query.filter(Project.status.in_(args['status']))
+
+        if args['start_date']:
+            query = query.filter(and_(Project.start_date <= args['start_date'][1], Project.start_date >= args['start_date'][0]))
+
+        if args['current_stage_index']:
+            query = query.filter(Project.current_stage_index.in_(args['current_stage_index']))
 
         if args['search']:
             query = query.join(Project.tags).filter(
