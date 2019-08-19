@@ -153,9 +153,6 @@ class PorjectsApi(Resource):
             query = query.filter(Project.status.in_(args['status']))
 
         if args['start_date']:
-            # start = datetime.strptime(args['start_date'][0],'%Y-%m-%d')
-            # end = datetime.strptime(args['start_date'][1],'%Y-%m-%d')
-            
             query = query.filter(and_(Project.start_date <= args['start_date'][1], Project.start_date >= args['start_date'][0]))
 
         if args['current_stage_index']:
