@@ -145,10 +145,8 @@ class UsersApi(Resource):
             else:
                 query = query.order_by(User.reg_date.desc())
 
-        record_query = query.paginate(
-            args['page'], args['pre_page'], error_out=False)
-        users = record_query.items
-        total = record_query.total
+        total = len(query.all())
+        users = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
 
         output = {
             'users': users,
@@ -292,10 +290,8 @@ class GroupsApi(Resource):
             else:
                 query = query.order_by(Group.reg_date.desc())
 
-        record_query = query.paginate(
-            args['page'], args['pre_page'], error_out=False)
-        groups = record_query.items
-        total = record_query.total
+        total = len(query.all())
+        groups = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
         
         output = {
             'groups':groups,

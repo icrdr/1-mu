@@ -115,8 +115,7 @@ class UploadApi(Resource):
             else:
                 query = query.order_by(File.upload_date.desc())
 
-        files_list = query.paginate(
-            args['page'], args['pre_page'], error_out=False).items
+        files_list = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
 
         return files_list, 200
 

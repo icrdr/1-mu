@@ -216,11 +216,9 @@ class PorjectsApi(Resource):
                 query = query.join(Project.client).order_by(User.id.asc(), Project.status.desc(), Project.id.desc())
             else:
                 query = query.join(Project.client).order_by(User.id.desc(), Project.status.desc(), Project.id.desc())
-
-        record_query = query.paginate(
-            args['page'], args['pre_page'], error_out=False)
-        projects = record_query.items
-        total = record_query.total
+            
+        total = len(query.all())
+        projects = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
         output = {
             'projects': projects,
             'total': total

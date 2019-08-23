@@ -68,7 +68,7 @@ class User(db.Model):
     # one-many: File.uploader-User.files
     files = db.relationship('File', foreign_keys='File.uploader_user_id',
                             backref=db.backref('uploader', lazy=True))
-
+    unread_messages_count = db.Column(db.Integer, default=0)
     # manay-many in same table:User.followed_users-User.follower_users
     followed_users = db.relationship('User',
                                      secondary=USER_FOLLOW, lazy='subquery',
@@ -288,3 +288,29 @@ class WxUser(db.Model):
 
     def __repr__(self):
         return '<WxUser %r>' % self.nickname
+
+class Message(db.Model):
+    """Message Model"""
+    __tablename__ = 'messages'
+    id = db.Column(db.Integer, primary_key=True)
+    send_date = db.Column(db.DateTime, default=datetime.utcnow)
+    read_date = db.Column(db.DateTime)
+
+    content = db.Column(db.Text)
+    read = db.Column(db.Boolean, default=False)
+    
+    status = db.Column(
+        db.Enum('draft', 'await', 'progress', 'delay', 'pending',
+                'abnormal', 'modify', 'pause','finish', 'discard'),
+        server_default=("draft"))
+
+    from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    from_user = db.relationship('User', foreign_keys=from_user_id, backref=db.backref(
+        'messages_as_sender', lazy=True))
+
+    to_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    to_user = db.relationship('User', foreign_keys=to_user_id, backref=db.backref(
+        'messages_as_receiver', lazy=True))
+
+    def __repr__(self):
+        return '<Message %r>' % self.name

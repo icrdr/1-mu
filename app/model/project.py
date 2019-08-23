@@ -71,6 +71,8 @@ class Project(db.Model):
     post_date = db.Column(db.DateTime, default=datetime.utcnow)
     start_date = db.Column(db.DateTime)
     finish_date = db.Column(db.DateTime)
+
+    # remove it 
     last_pause_date = db.Column(db.DateTime)
 
     # one-many: project.client-User.projects_as_client
