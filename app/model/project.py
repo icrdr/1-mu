@@ -606,14 +606,15 @@ def resetCurrentStage(project):
 
 
 def wx_upload_message(notice):
-    openid = notice.to_user.wx_user.openid
     option = Option.query.filter_by(name='wechat_access_token').first()
+    if not option:
+        return False
     url = "https://api.weixin.qq.com/cgi-bin/message/template/send"
     params = {
         "access_token": option.value,
     }
     data = {
-        "touser": openid,
+        "touser": notice.to_user.wx_user.openid,
         "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
         "url": "http://beta.1-mu.com/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
         "data": {
