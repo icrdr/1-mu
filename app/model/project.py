@@ -609,7 +609,7 @@ def wx_message(notice):
     option = Option.query.filter_by(name='wechat_access_token').first()
     if not option:
         return False
-    if not new_notice.to_user.wx_user:
+    if not notice.to_user.wx_user:
         return False
 
     url = "https://api.weixin.qq.com/cgi-bin/message/template/send"
