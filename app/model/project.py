@@ -151,7 +151,7 @@ class Project(db.Model):
             db.session.add(new_phase)
             deadline = datetime.utcnow() + timedelta(days=new_phase.days_need)
             new_phase.deadline_date = deadline
-
+            wx_message(new_notice)
             # create a new delay counter
             addDelayCounter(self.id, deadline)
         db.session.commit()
@@ -175,6 +175,7 @@ class Project(db.Model):
         self.current_phase().feedback_date = datetime.utcnow()
         self.current_phase().client_user_id = client_id
         nextStageStart(self)
+        wx_message(new_notice)
         db.session.commit()
         return self
 
@@ -205,8 +206,7 @@ class Project(db.Model):
             if cover_file.previews:
                 new_notice.cover_url = cover_file.previews[0].url
             db.session.add(new_notice)
-            if(self.client.wx_user):
-                wx_upload_message(new_notice)
+            wx_message(new_notice)
             # stop the delay counter
             removeDelayCounter(self.id)
         db.session.commit()
@@ -605,37 +605,89 @@ def resetCurrentStage(project):
     db.session.add(first_phase)
 
 
-def wx_upload_message(notice):
+def wx_message(notice):
     option = Option.query.filter_by(name='wechat_access_token').first()
     if not option:
         return False
+    if not new_notice.to_user.wx_user:
+        return False
+
     url = "https://api.weixin.qq.com/cgi-bin/message/template/send"
     params = {
         "access_token": option.value,
     }
-    data = {
-        "touser": notice.to_user.wx_user.openid,
-        "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-        "url": "http://beta.1-mu.com/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
-        "data": {
-            "first": {
-                "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title, notice.parent_stage.name),
-                "color": "#173177"
-            },
-            "keyword1": {
-                "value": "{}提交了阶段成品".format(notice.from_user.name),
-                "color": "#173177"
-            },
-            "keyword2": {
-                "value": str(notice.send_date),
-                "color": "#173177"
-            },
-            "remark": {
-                "value": "请查看详细信息",
-                "color": "#173177"
+    if notice.notice_type=='upload':
+        data = {
+            "touser": notice.to_user.wx_user.openid,
+            "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
+            "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
+            "data": {
+                "first": {
+                    "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title, notice.parent_stage.name),
+                    "color": "#173177"
+                },
+                "keyword1": {
+                    "value": "{}提交了阶段成品".format(notice.from_user.name),
+                    "color": "#173177"
+                },
+                "keyword2": {
+                    "value": str(notice.send_date),
+                    "color": "#173177"
+                },
+                "remark": {
+                    "value": "请查看详细信息",
+                    "color": "#173177"
+                }
             }
         }
-    }
+    elif notice.notice_type=='modify':
+        data = {
+            "touser": notice.to_user.wx_user.openid,
+            "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
+            "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
+            "data": {
+                "first": {
+                    "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title, notice.parent_stage.name),
+                    "color": "#173177"
+                },
+                "keyword1": {
+                    "value": "{}对新的提交有修改建议".format(notice.from_user.name),
+                    "color": "#173177"
+                },
+                "keyword2": {
+                    "value": str(notice.send_date),
+                    "color": "#173177"
+                },
+                "remark": {
+                    "value": "具体建议请点击",
+                    "color": "#173177"
+                }
+            }
+        }
+    elif notice.notice_type=='pass':
+        data = {
+            "touser": notice.to_user.wx_user.openid,
+            "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
+            "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
+            "data": {
+                "first": {
+                    "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title, notice.parent_stage.name),
+                    "color": "#173177"
+                },
+                "keyword1": {
+                    "value": "{}对新的提交基本满意".format(notice.from_user.name),
+                    "color": "#173177"
+                },
+                "keyword2": {
+                    "value": str(notice.send_date),
+                    "color": "#173177"
+                },
+                "remark": {
+                    "value": "具体建议请点击",
+                    "color": "#173177"
+                }
+            }
+        }
     try:
         res = requests.post(url, params=params, data=json.dumps(
             data, ensure_ascii=False).encode('utf-8'))
