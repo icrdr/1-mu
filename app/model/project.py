@@ -618,7 +618,7 @@ def wx_upload_message(notice):
         "url": "http://beta.1-mu.com/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
         "data": {
             "first": {
-                "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title,notice.parent_stage.name),
+                "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title, notice.parent_stage.name),
                 "color": "#173177"
             },
             "keyword1": {
@@ -639,6 +639,7 @@ def wx_upload_message(notice):
         res = requests.post(url, params=params, data=json.dumps(
             data, ensure_ascii=False).encode('utf-8'))
         data = res.json()
+        print('send wx message to {}'.format(notice.to_user.name))
 
     except Exception as e:
         print(e)
