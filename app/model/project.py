@@ -626,7 +626,7 @@ def wx_upload_message(notice):
                 "color": "#173177"
             },
             "keyword2": {
-                "value": notice.send_date,
+                "value": str(notice.send_date),
                 "color": "#173177"
             },
             "remark": {
