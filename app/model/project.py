@@ -131,7 +131,7 @@ class Project(db.Model):
                 parent_project_id=self.id,
                 parent_stage_id=self.current_stage().id,
                 parent_phase_id=self.current_phase().id,
-                from_user_id=self.client_id,
+                from_user_id=client_id,
                 to_user_id=self.creator.id,
                 notice_type='modify',
                 content=feedback
