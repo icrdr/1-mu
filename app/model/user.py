@@ -68,7 +68,6 @@ class User(db.Model):
     # one-many: File.uploader-User.files
     files = db.relationship('File', foreign_keys='File.uploader_user_id',
                             backref=db.backref('uploader', lazy=True))
-    unread_messages_count = db.Column(db.Integer, default=0)
     # manay-many in same table:User.followed_users-User.follower_users
     followed_users = db.relationship('User',
                                      secondary=USER_FOLLOW, lazy='subquery',
@@ -298,11 +297,6 @@ class Message(db.Model):
 
     content = db.Column(db.Text)
     read = db.Column(db.Boolean, default=False)
-    
-    status = db.Column(
-        db.Enum('draft', 'await', 'progress', 'delay', 'pending',
-                'abnormal', 'modify', 'pause','finish', 'discard'),
-        server_default=("draft"))
 
     from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     from_user = db.relationship('User', foreign_keys=from_user_id, backref=db.backref(
@@ -313,4 +307,4 @@ class Message(db.Model):
         'messages_as_receiver', lazy=True))
 
     def __repr__(self):
-        return '<Message %r>' % self.name
+        return '<Message %r>' % self.id

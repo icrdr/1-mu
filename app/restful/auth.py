@@ -21,7 +21,11 @@ M_GROUP_MIN = api.model('group_min)', {
     'id': fields.Integer(),
     'name': fields.String(),
 })
-m_user = api.model('user', {
+
+def is_unread(notice):
+    return notice.read == False
+
+M_USER = api.model('user', {
     'id': fields.Integer,
     'name': fields.String,
     'title': fields.String,
@@ -35,6 +39,9 @@ m_user = api.model('user', {
     'role': fields.String(
         attribute=lambda x: str(x.role.name)
     ),
+    'unread_count': fields.Integer(
+        attribute=lambda x: len(list(filter(is_unread, x.project_notices_as_receiver)))
+    ),
     'followed_count': fields.Integer(
         attribute=lambda x: len(x.followed_users)
     ),
@@ -45,7 +52,7 @@ m_user = api.model('user', {
 })
 
 m_auth = api.model('users', {
-    'user': fields.Nested(m_user),
+    'user': fields.Nested(M_USER),
     'token': fields.String,
 })
 
@@ -81,7 +88,7 @@ g_user.add_argument('token', location='cookies')
 
 @n_me.route('')
 class MeApi(Resource):
-    @api.marshal_with(m_user)
+    @api.marshal_with(M_USER)
     @api.expect(g_user)
     def get(self):
         args = g_user.parse_args()

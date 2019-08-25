@@ -1,6 +1,6 @@
 from .post import Post, Comment, Category, Tag
 
-from .project import Project, Stage, Phase, Propose, PhasePause
+from .project import Project, Stage, Phase, Propose, PhasePause, ProjectNotice
 
 from .file import File, Preview
 

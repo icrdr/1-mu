@@ -34,7 +34,7 @@ m_file = api.model('file', {
     'id': fields.Integer(description="Unique identifier for the user."),
     'name': fields.String(description="Display name for the user."),
     'description': fields.String(description="The title for the user."),
-    'url': fields.String(attribute=lambda x: buildUrl(x.url), description="The avatar url for the user."),
+    'url': fields.String(attribute=lambda x: buildUrl(x.url)),
     'format': fields.String(description="Registration date for the user."),
     'uploader': fields.Nested(m_user),
     'previews': fields.List(fields.Nested(m_preview)),

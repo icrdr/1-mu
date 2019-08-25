@@ -1,7 +1,7 @@
 from flask_restplus import Resource, reqparse, fields, marshal
 from flask import g, request
 from .. import api, db, app
-from ..model import User, Group
+from ..model import User, Group, ProjectNotice
 from ..utility import buildUrl, getAvatar
 from werkzeug.security import generate_password_hash
 from .decorator import permission_required, admin_required
@@ -15,7 +15,7 @@ m_wx_user = api.model('user', {
     'headimg_url': fields.String(description="The avatar url for the user."),
 })
 
-M_GROUP_MEMBER = api.model('group_member', {
+M_MIN_USER = api.model('group_member', {
     'id': fields.Integer(),
     'name': fields.String(),
     'avatar_url': fields.String(attribute=getAvatar),
@@ -25,8 +25,8 @@ M_GROUP = api.model('group', {
     'id': fields.Integer(),
     'name': fields.String(),
     'description': fields.String(),
-    'admins': fields.List(fields.Nested(M_GROUP_MEMBER)),
-    'users': fields.List(fields.Nested(M_GROUP_MEMBER)),
+    'admins': fields.List(fields.Nested(M_MIN_USER)),
+    'users': fields.List(fields.Nested(M_MIN_USER)),
 })
 M_GROUP_MIN = api.model('group_min)', {
     'id': fields.Integer(),
@@ -237,7 +237,63 @@ class UserApi(Resource):
         except Exception as e:
             print(e)
             api.abort(400, "delete fail!")
-        
+
+M_MIN_PROJECT = api.model('project', {
+    'id': fields.Integer(),
+    'title': fields.String(),
+})
+
+M_MIN_PHASE = api.model('phase', {
+    'id': fields.Integer(),
+    'name': fields.String(),
+})
+
+M_MIN_STAGE = api.model('stage', {
+    'id': fields.Integer(),
+    'name': fields.String(),
+})
+
+M_PROJECT_NOTICE = api.model('project_notice', {
+    'id': fields.Integer(),
+    'from_user': fields.Nested(M_MIN_USER),
+    'notice_type': fields.String(),
+    'send_date': fields.String,
+    'parent_project': fields.Nested(M_MIN_PROJECT),
+    'parent_phase': fields.Nested(M_MIN_PHASE),
+    'parent_stage': fields.Nested(M_MIN_STAGE),
+    'cover_url': fields.String(attribute=lambda x: buildUrl(x.cover_url)),
+    'content': fields.String(),
+    'read': fields.Integer()
+})
+
+M_PROJECT_NOTICES = api.model('project_notices', {
+    'project_notices': fields.List(fields.Nested(M_PROJECT_NOTICE)),
+    'total': fields.Integer,
+    'unread': fields.Integer,
+})
+
+G_PROJECT_NOTICE = reqparse.RequestParser()
+G_PROJECT_NOTICE.add_argument('page', location='args', type=int, default=1)
+G_PROJECT_NOTICE.add_argument('pre_page', location='args', type=int, default=10)
+
+@n_user.route('/<int:user_id>/project_notices')
+class UserProjectNotiecsApi(Resource):
+    def get(self, user_id):
+        args = G_PROJECT_NOTICE.parse_args()
+        user = userCheck(user_id)
+        query = ProjectNotice.query.filter_by(to_user_id=user_id).order_by(ProjectNotice.id.desc())
+
+        notices = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
+        for notice in notices:
+            notice.set_read()
+
+        output = {
+            'project_notices': notices,
+            'total': len(query.all()),
+            'unread':len(query.filter_by(read=False).all())
+        }
+        return marshal(output, M_PROJECT_NOTICES, skip_none=True), 200
+
 N_GROUP = api.namespace('api/groups', description='Group Operations')
 
 M_GROUPS = api.model('groups', {

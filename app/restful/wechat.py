@@ -155,7 +155,8 @@ class WxTokenApi(Resource):
             func=getAccessToken,
             trigger='interval',
             minutes=110,
-            replace_existing=True
+            replace_existing=True,
+            misfire_grace_time=2592000
         )
 
         return getAccessToken()

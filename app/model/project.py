@@ -92,6 +92,9 @@ class Project(db.Model):
     proposes = db.relationship(
         'Propose', backref=db.backref('parent_project', lazy=True))
 
+    notices = db.relationship(
+        'ProjectNotice', backref=db.backref('parent_project', lazy=True))
+
     def current_stage(self):
         """Get current stage."""
         return self.stages[self.current_stage_index]
@@ -120,6 +123,18 @@ class Project(db.Model):
         self.current_phase().client_feedback = feedback
         self.current_phase().client_user_id = client_id
         if confirm:
+            # add notice
+            new_notice = ProjectNotice(
+                parent_project_id=self.id,
+                parent_stage_id=self.current_stage().id,
+                parent_phase_id=self.current_phase().id,
+                from_user_id=self.client_id,
+                to_user_id=self.creator.id,
+                notice_type='modify',
+                content=feedback
+            )
+            db.session.add(new_notice)
+
             self.status = 'modify'
             self.current_phase().feedback_date = datetime.utcnow()
             # craete new phase in current stage
@@ -132,6 +147,7 @@ class Project(db.Model):
             db.session.add(new_phase)
             deadline = datetime.utcnow() + timedelta(days=new_phase.days_need)
             new_phase.deadline_date = deadline
+
             # create a new delay counter
             addDelayCounter(self.id, deadline)
         db.session.commit()
@@ -139,6 +155,17 @@ class Project(db.Model):
 
     def finish(self, client_id):
         """Finish current stage."""
+        # add notice
+        new_notice = ProjectNotice(
+            parent_project_id=self.id,
+            parent_stage_id=self.current_stage().id,
+            parent_phase_id=self.current_phase().id,
+            from_user_id=client_id,
+            to_user_id=self.creator.id,
+            notice_type='pass',
+        )
+        db.session.add(new_notice)
+
         # current phase update
         self.status = 'finish'
         self.current_phase().feedback_date = datetime.utcnow()
@@ -159,7 +186,22 @@ class Project(db.Model):
 
         if confirm:
             self.status = 'pending'
-            self.current_phase().upload_date = datetime.utcnow()
+            self.current_phase().upload_date = datetime.utcnow() 
+            # add notice
+            new_notice = ProjectNotice(
+                parent_project_id=self.id,
+                parent_stage_id=self.current_stage().id,
+                parent_phase_id=self.current_phase().id,
+                from_user_id=creator_id,
+                to_user_id=self.client.id,
+                notice_type='upload',
+                content=upload
+            )
+            cover_file = File.query.get(upload_files[0]['id'])
+            if cover_file.previews:
+                new_notice.cover_url = cover_file.previews[0].url
+            db.session.add(new_notice)
+
             # stop the delay counter
             removeDelayCounter(self.id)
         db.session.commit()
@@ -368,7 +410,7 @@ class Stage(db.Model):
     """Stage Model"""
     __tablename__ = 'stages'
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64))
+    name = db.Column(db.String(128))
     description = db.Column(db.String(512))
     # one-many: Project.stages-Stage.parent_project
     parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
@@ -377,7 +419,8 @@ class Stage(db.Model):
     # one-many: Phase.parent_stage-Stage.phases
     phases = db.relationship(
         'Phase', backref=db.backref('parent_stage', lazy=True))
-
+    notices = db.relationship(
+        'ProjectNotice', backref=db.backref('parent_stage', lazy=True))
     def __repr__(self):
         return '<Stage %r>' % self.name
 
@@ -412,7 +455,8 @@ class Phase(db.Model):
     # many-many: File.phases-Phase.files
     files = db.relationship('File', secondary=PHASE_FILE,
                             lazy='subquery', backref=db.backref('phases', lazy=True))
-
+    notices = db.relationship(
+        'ProjectNotice', backref=db.backref('parent_phase', lazy=True))
     pauses = db.relationship(
         'PhasePause', backref=db.backref('parent_phase', lazy=True))
 
@@ -431,14 +475,53 @@ class PhasePause(db.Model):
     def __repr__(self):
         return '<PhasePause %r>' % self.id
 
+class ProjectNotice(db.Model):
+    """ProjectNotice Model"""
+    __tablename__ = 'project_notices'
+    id = db.Column(db.Integer, primary_key=True)
+    send_date = db.Column(db.DateTime, default=datetime.utcnow)
+    read_date = db.Column(db.DateTime)
+
+    parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    parent_stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
+    parent_phase_id = db.Column(db.Integer, db.ForeignKey('phases.id'))
+    propose_id = db.Column(db.Integer, db.ForeignKey('proposes.id'))
+
+    notice_type = db.Column(
+        db.Enum('upload', 'pass', 'modify', 'delay', 'propose'),
+        server_default=("upload"))
+
+    content = db.Column(db.Text)
+    cover_url = db.Column(db.String(512))
+    read = db.Column(db.Boolean, default=False)
+
+    from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    from_user = db.relationship('User', foreign_keys=from_user_id, backref=db.backref(
+        'project_notices_as_sender', lazy=True))
+
+    to_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    to_user = db.relationship('User', foreign_keys=to_user_id, backref=db.backref(
+        'project_notices_as_receiver', lazy=True))
+
+    def set_read(self):
+        self.read = True
+        self.read_date = datetime.utcnow()
+        db.session.commit()
+        return self
+
+    def __repr__(self):
+        return '<ProjectNotice %r>' % self.id
+
 class Propose(db.Model):
     """Propose Model"""
     __tablename__ = 'proposes'
     id = db.Column(db.Integer, primary_key=True)
     parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    notice = db.relationship(
+        'ProjectNotice', backref='propose', uselist=False)
     proposer_role = db.Column(
         db.Enum('creator', 'client'), server_default=("creator"))
-    type = db.Column(db.Enum('postpone', 'overhaul'),
+    propose_type = db.Column(db.Enum('postpone', 'overhaul'),
                      server_default=("postpone"))
     propose_date = db.Column(db.DateTime)
 
