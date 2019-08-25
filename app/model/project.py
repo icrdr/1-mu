@@ -5,9 +5,12 @@ Project Stage Phase Propose
 from datetime import datetime, timedelta
 from .. import db, scheduler
 from .user import User, Group
+from .misc import Option
 from .file import File
 from .post import Tag
 import math
+import json
+import requests
 
 PROJECT_TAG = db.Table(
     'project_tags',
@@ -66,13 +69,13 @@ class Project(db.Model):
 
     status = db.Column(
         db.Enum('draft', 'await', 'progress', 'delay', 'pending',
-                'abnormal', 'modify', 'pause','finish', 'discard'),
+                'abnormal', 'modify', 'pause', 'finish', 'discard'),
         server_default=("draft"))
     post_date = db.Column(db.DateTime, default=datetime.utcnow)
     start_date = db.Column(db.DateTime)
     finish_date = db.Column(db.DateTime)
 
-    # remove it 
+    # remove it
     last_pause_date = db.Column(db.DateTime)
 
     # one-many: project.client-User.projects_as_client
@@ -141,8 +144,9 @@ class Project(db.Model):
             new_phase = Phase(
                 parent_project=self,
                 parent_stage=self.current_stage(),
-                start_date = datetime.utcnow(),
-                days_need=math.floor( self.current_stage().phases[0].days_need*0.2 )+1,  # 4 days later
+                start_date=datetime.utcnow(),
+                days_need=math.floor(self.current_stage(
+                ).phases[0].days_need*0.2)+1,  # 4 days later
             )
             db.session.add(new_phase)
             deadline = datetime.utcnow() + timedelta(days=new_phase.days_need)
@@ -186,7 +190,7 @@ class Project(db.Model):
 
         if confirm:
             self.status = 'pending'
-            self.current_phase().upload_date = datetime.utcnow() 
+            self.current_phase().upload_date = datetime.utcnow()
             # add notice
             new_notice = ProjectNotice(
                 parent_project_id=self.id,
@@ -201,7 +205,8 @@ class Project(db.Model):
             if cover_file.previews:
                 new_notice.cover_url = cover_file.previews[0].url
             db.session.add(new_notice)
-
+            if(self.client.wx_user):
+                wx_upload_message(new_notice)
             # stop the delay counter
             removeDelayCounter(self.id)
         db.session.commit()
@@ -221,8 +226,9 @@ class Project(db.Model):
             new_phase = Phase(
                 parent_project=self,
                 parent_stage=self.current_stage(),
-                start_date = datetime.utcnow(),
-                days_need=self.current_stage().phases[0].days_need,  # 4 days later
+                start_date=datetime.utcnow(),
+                days_need=self.current_stage(
+                ).phases[0].days_need,  # 4 days later
             )
             db.session.add(new_phase)
             deadline = datetime.utcnow() + timedelta(days=new_phase.days_need)
@@ -242,7 +248,7 @@ class Project(db.Model):
         # current phase update
         self.status = 'discard'
         new_pause = PhasePause(
-            pause_date = datetime.utcnow()
+            pause_date=datetime.utcnow()
         )
         db.session.add(new_pause)
         self.current_phase().pauses.append(new_pause)
@@ -265,7 +271,8 @@ class Project(db.Model):
             else:
                 self.status = 'progress'
             # create a new delay counter
-            offset = self.current_phase().start_date - self.current_phase().pauses[-1].pause_date
+            offset = self.current_phase().start_date - \
+                self.current_phase().pauses[-1].pause_date
             deadline = datetime.utcnow() + timedelta(days=self.current_phase().days_need) + offset
             self.current_phase().deadline_date = deadline
 
@@ -279,14 +286,15 @@ class Project(db.Model):
     def postpone(self, days):
         """postpone this stage."""
         # current phase update
-        self.current_phase().days_need += days 
+        self.current_phase().days_need += days
         # create a new delay counter
         if len(self.current_stage().phases) > 1:
             self.status = 'modify'
         else:
             self.status = 'progress'
 
-        deadline = self.current_phase().start_date + timedelta(days=self.current_phase().days_need)
+        deadline = self.current_phase().start_date + \
+            timedelta(days=self.current_phase().days_need)
         self.current_phase().deadline = deadline
         addDelayCounter(self.id, deadline)
         db.session.commit()
@@ -297,7 +305,7 @@ class Project(db.Model):
         # current phase update
         self.status = 'abnormal'
         new_pause = PhasePause(
-            pause_date = datetime.utcnow()
+            pause_date=datetime.utcnow()
         )
         db.session.add(new_pause)
         self.current_phase().pauses.append(new_pause)
@@ -311,7 +319,7 @@ class Project(db.Model):
         # current phase update
         self.status = 'pause'
         new_pause = PhasePause(
-            pause_date = datetime.utcnow()
+            pause_date=datetime.utcnow()
         )
         db.session.add(new_pause)
         self.current_phase().pauses.append(new_pause)
@@ -421,6 +429,7 @@ class Stage(db.Model):
         'Phase', backref=db.backref('parent_stage', lazy=True))
     notices = db.relationship(
         'ProjectNotice', backref=db.backref('parent_stage', lazy=True))
+
     def __repr__(self):
         return '<Stage %r>' % self.name
 
@@ -444,7 +453,7 @@ class Phase(db.Model):
         'Phases_as_client', lazy=True))
     client_feedback = db.Column(db.Text)
     feedback_date = db.Column(db.DateTime)
-    
+
     start_date = db.Column(db.DateTime)
     deadline_date = db.Column(db.DateTime)
 
@@ -462,7 +471,8 @@ class Phase(db.Model):
 
     def __repr__(self):
         return '<Phase %r>' % self.id
-        
+
+
 class PhasePause(db.Model):
     """Phase pauseModel"""
     __tablename__ = 'phase_pauses'
@@ -474,6 +484,7 @@ class PhasePause(db.Model):
 
     def __repr__(self):
         return '<PhasePause %r>' % self.id
+
 
 class ProjectNotice(db.Model):
     """ProjectNotice Model"""
@@ -512,6 +523,7 @@ class ProjectNotice(db.Model):
     def __repr__(self):
         return '<ProjectNotice %r>' % self.id
 
+
 class Propose(db.Model):
     """Propose Model"""
     __tablename__ = 'proposes'
@@ -522,7 +534,7 @@ class Propose(db.Model):
     proposer_role = db.Column(
         db.Enum('creator', 'client'), server_default=("creator"))
     propose_type = db.Column(db.Enum('postpone', 'overhaul'),
-                     server_default=("postpone"))
+                             server_default=("postpone"))
     propose_date = db.Column(db.DateTime)
 
     def __repr__(self):
@@ -577,6 +589,7 @@ def nextStageStart(project):
     else:
         project.finish_date = datetime.utcnow()
 
+
 def resetCurrentStage(project):
     # reset current stage
     days_need = project.current_stage().phases[0].days_need
@@ -590,3 +603,42 @@ def resetCurrentStage(project):
         days_need=days_need
     )
     db.session.add(first_phase)
+
+
+def wx_upload_message(notice):
+    openid = notice.to_user.wx_user.openid
+    option = Option.query.filter_by(name='wechat_access_token').first()
+    url = "https://api.weixin.qq.com/cgi-bin/message/template/send"
+    params = {
+        "access_token": option.value,
+    }
+    data = {
+        "touser": openid,
+        "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
+        "url": "http://beta.1-mu.com/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
+        "data": {
+            "first": {
+                "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title,notice.parent_stage.name),
+                "color": "#173177"
+            },
+            "keyword1": {
+                "value": "{}提交了阶段成品".format(notice.from_user.name),
+                "color": "#173177"
+            },
+            "keyword2": {
+                "value": notice.send_date,
+                "color": "#173177"
+            },
+            "remark": {
+                "value": "请查看详细信息",
+                "color": "#173177"
+            }
+        }
+    }
+    try:
+        res = requests.post(url, params=params, data=json.dumps(
+            data, ensure_ascii=False).encode('utf-8'))
+        data = res.json()
+
+    except Exception as e:
+        print(e)
