@@ -270,13 +270,16 @@ class Project(db.Model):
                 self.status = 'modify'
             else:
                 self.status = 'progress'
+
             # create a new delay counter
             offset = self.current_phase().start_date - \
                 self.current_phase().pauses[-1].pause_date
-            deadline = datetime.utcnow() + timedelta(days=self.current_phase().days_need) + offset
-            self.current_phase().deadline_date = deadline
-
-            addDelayCounter(self.id, deadline)
+            if timedelta(days=self.current_phase().days_need) > self.current_phase().pauses[-1].pause_date - self.current_phase().start_date:
+                deadline = datetime.utcnow() + timedelta(days=self.current_phase().days_need) + offset
+                self.current_phase().deadline_date = deadline
+                addDelayCounter(self.id, deadline)
+            else:
+                self.status = 'delay'
         else:
             self.status = 'await'
         self.current_phase().pauses[-1].resume_date = datetime.utcnow()
@@ -616,7 +619,7 @@ def wx_message(notice):
     params = {
         "access_token": option.value,
     }
-    if notice.notice_type=='upload':
+    if notice.notice_type == 'upload':
         data = {
             "touser": notice.to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
@@ -640,7 +643,7 @@ def wx_message(notice):
                 }
             }
         }
-    elif notice.notice_type=='modify':
+    elif notice.notice_type == 'modify':
         data = {
             "touser": notice.to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
@@ -664,7 +667,7 @@ def wx_message(notice):
                 }
             }
         }
-    elif notice.notice_type=='pass':
+    elif notice.notice_type == 'pass':
         data = {
             "touser": notice.to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
