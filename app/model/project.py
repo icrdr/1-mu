@@ -11,6 +11,7 @@ from .post import Tag
 import math
 import json
 import requests
+from ..utility import UTC2Local, excerptHtml
 
 PROJECT_TAG = db.Table(
     'project_tags',
@@ -125,6 +126,7 @@ class Project(db.Model):
         # current phase update
         self.current_phase().client_feedback = feedback
         self.current_phase().client_user_id = client_id
+
         if confirm:
             # add notice
             new_notice = ProjectNotice(
@@ -150,6 +152,7 @@ class Project(db.Model):
             )
             db.session.add(new_phase)
             deadline = datetime.utcnow() + timedelta(days=new_phase.days_need)
+
             new_phase.deadline_date = deadline
             wx_message(new_notice)
             # create a new delay counter
@@ -626,19 +629,19 @@ def wx_message(notice):
             "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
             "data": {
                 "first": {
-                    "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title, notice.parent_stage.name),
+                    "value": "企划：{}    阶段：{}".format(notice.parent_project.title, notice.parent_stage.name),
                     "color": "#173177"
                 },
                 "keyword1": {
-                    "value": "{}提交了阶段成品".format(notice.from_user.name),
+                    "value": "{} 提交了阶段成品".format(notice.from_user.name),
                     "color": "#173177"
                 },
                 "keyword2": {
-                    "value": str(notice.send_date),
+                    "value": UTC2Local(notice.send_date).strftime("%Y-%m-%d %H:%M:%S"),
                     "color": "#173177"
                 },
                 "remark": {
-                    "value": "请查看详细信息",
+                    "value": "说明：{}".format(excerptHtml(notice.content,40)),
                     "color": "#173177"
                 }
             }
@@ -650,19 +653,19 @@ def wx_message(notice):
             "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
             "data": {
                 "first": {
-                    "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title, notice.parent_stage.name),
+                    "value": "企划：{}    阶段：{}".format(notice.parent_project.title, notice.parent_stage.name),
                     "color": "#173177"
                 },
                 "keyword1": {
-                    "value": "{}对新的提交有修改建议".format(notice.from_user.name),
+                    "value": "{} 提出了修改建议".format(notice.from_user.name),
                     "color": "#173177"
                 },
                 "keyword2": {
-                    "value": str(notice.send_date),
+                    "value": UTC2Local(notice.send_date).strftime("%Y-%m-%d %H:%M:%S"),
                     "color": "#173177"
                 },
                 "remark": {
-                    "value": "具体建议请点击",
+                    "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content,40)),
                     "color": "#173177"
                 }
             }
@@ -674,19 +677,19 @@ def wx_message(notice):
             "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
             "data": {
                 "first": {
-                    "value": "企划：{} 阶段：{} 有新进展".format(notice.parent_project.title, notice.parent_stage.name),
+                    "value": "企划：{}    阶段：{}".format(notice.parent_project.title, notice.parent_stage.name),
                     "color": "#173177"
                 },
                 "keyword1": {
-                    "value": "{}对新的提交基本满意".format(notice.from_user.name),
+                    "value": "{} 审核通过当前阶段".format(notice.from_user.name),
                     "color": "#173177"
                 },
                 "keyword2": {
-                    "value": str(notice.send_date),
+                    "value": UTC2Local(notice.send_date).strftime("%Y-%m-%d %H:%M:%S"),
                     "color": "#173177"
                 },
                 "remark": {
-                    "value": "具体建议请点击",
+                    "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content,40)),
                     "color": "#173177"
                 }
             }

@@ -1,5 +1,9 @@
 from . import app
 import os
+from datetime import datetime
+from dateutil import tz
+import re
+
 def buildUrl(path, dir=app.config['UPLOAD_FOLDER']):
     if path:
         return str(os.path.join(app.config['DOMAIN_URL'], dir + path)).replace('\\', '/')
@@ -16,3 +20,21 @@ def getAvatar(user):
             return ''
     except Exception as e:
         print(e)
+
+def UTC2Local(date):
+    from_zone = tz.tzutc()
+    to_zone = tz.tzlocal()
+
+    date = date.replace(tzinfo=from_zone)
+
+    # Convert time zone
+    local = date.astimezone(to_zone)
+    return local
+
+def excerptHtml(html,length=20):
+    pattern = re.compile(r'<[^>]+>',re.S)
+    result = pattern.sub('', html)
+    if len(result)>20:
+        result = result[:length]+'...'
+    return result
+
