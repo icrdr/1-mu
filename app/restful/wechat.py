@@ -54,11 +54,12 @@ class WxApi(Resource):
             # if 'EventKey' in xml_dict:
             #     print('event_key: '+ str(xml_dict['EventKey']))
             # print(xml_dict['FromUserName'])
-            if 'login' in xml_dict['EventKey']:
-                try:
-                    r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
-                except Exception as e:
-                    print(e)
+            if 'EventKey' in xml_dict:
+                if 'login' in xml_dict['EventKey']:
+                    try:
+                        r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
+                    except Exception as e:
+                        print(e)
 
             return Response('')
 

@@ -631,20 +631,19 @@ def wx_message(notice):
             "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
             "data": {
                 "first": {
-                    "value": "企划：{}    阶段：{}".format(notice.parent_project.title, notice.parent_stage.name),
-                    "color": "#173177"
+                    "value": "企划名：{}-{}".format(notice.parent_project.title, notice.parent_stage.name),
                 },
                 "keyword1": {
                     "value": "{} 提交了阶段成品".format(notice.from_user.name),
-                    "color": "#173177"
+                    "color": "#8c8c8c"
                 },
                 "keyword2": {
                     "value": UTC2Local(notice.send_date).strftime("%Y-%m-%d %H:%M:%S"),
-                    "color": "#173177"
+                    "color": "#8c8c8c"
                 },
                 "remark": {
                     "value": "说明：{}".format(excerptHtml(notice.content,40)),
-                    "color": "#173177"
+                    "color": "#8c8c8c"
                 }
             }
         }
@@ -655,20 +654,19 @@ def wx_message(notice):
             "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
             "data": {
                 "first": {
-                    "value": "企划：{}    阶段：{}".format(notice.parent_project.title, notice.parent_stage.name),
-                    "color": "#173177"
+                    "value": "企划名：{}-{}".format(notice.parent_project.title, notice.parent_stage.name),
                 },
                 "keyword1": {
                     "value": "{} 提出了修改建议".format(notice.from_user.name),
-                    "color": "#173177"
+                    "color": "#8c8c8c"
                 },
                 "keyword2": {
                     "value": UTC2Local(notice.send_date).strftime("%Y-%m-%d %H:%M:%S"),
-                    "color": "#173177"
+                    "color": "#8c8c8c"
                 },
                 "remark": {
                     "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content,40)),
-                    "color": "#173177"
+                    "color": "#8c8c8c"
                 }
             }
         }
@@ -679,20 +677,19 @@ def wx_message(notice):
             "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
             "data": {
                 "first": {
-                    "value": "企划：{}    阶段：{}".format(notice.parent_project.title, notice.parent_stage.name),
-                    "color": "#173177"
+                    "value": "企划名：{}-{}".format(notice.parent_project.title, notice.parent_stage.name),
                 },
                 "keyword1": {
                     "value": "{} 审核通过当前阶段".format(notice.from_user.name),
-                    "color": "#173177"
+                    "color": "#8c8c8c"
                 },
                 "keyword2": {
                     "value": UTC2Local(notice.send_date).strftime("%Y-%m-%d %H:%M:%S"),
-                    "color": "#173177"
+                    "color": "#8c8c8c"
                 },
                 "remark": {
                     "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content,40)),
-                    "color": "#173177"
+                    "color": "#8c8c8c"
                 }
             }
         }
