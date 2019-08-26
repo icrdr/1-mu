@@ -430,12 +430,15 @@ class PorjectPostponeApi(Resource):
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
+FINISH_PROJECT = reqparse.RequestParser()\
+    .add_argument('feedback', default='没有建议')\
 
 @N_PROJECT.route('/<int:project_id>/finish')
 class PorjectFinishApi(Resource):
     @api.marshal_with(M_PROJECT)
     @permission_required()
     def put(self, project_id):
+        args = FINISH_PROJECT.parse_args()
         project = Project.query.get(project_id)
         if project.status != 'pending':
             api.abort(
@@ -445,7 +448,7 @@ class PorjectFinishApi(Resource):
                 api.abort(
                     403, "Only the project's client can feedback(Administrator privileges required).")
         try:
-            project.finish(g.current_user.id)
+            project.finish(g.current_user.id, args['feedback'])
             return project, 201
         except Exception as error:
             print(error)

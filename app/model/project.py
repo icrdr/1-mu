@@ -160,7 +160,7 @@ class Project(db.Model):
         db.session.commit()
         return self
 
-    def finish(self, client_id):
+    def finish(self, client_id, feedback):
         """Finish current stage."""
         # add notice
         new_notice = ProjectNotice(
@@ -170,12 +170,14 @@ class Project(db.Model):
             from_user_id=client_id,
             to_user_id=self.creator.id,
             notice_type='pass',
+            content=feedback
         )
         db.session.add(new_notice)
 
         # current phase update
         self.status = 'finish'
         self.current_phase().feedback_date = datetime.utcnow()
+        self.current_phase().client_feedback = feedback
         self.current_phase().client_user_id = client_id
         nextStageStart(self)
         wx_message(new_notice)
