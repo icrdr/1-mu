@@ -73,7 +73,6 @@ M_PHASE = api.model('phase', {
 M_STAGE = api.model('stage', {
     'id': fields.Integer,
     'name': fields.String,
-    'start_date': fields.String,
     'phases': fields.List(fields.Nested(M_PHASE))
 })
 M_GROUP = api.model('group', {

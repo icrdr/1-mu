@@ -112,6 +112,25 @@ def fixDiscard():
             db.session.commit()
 
 @app.cli.command()
+def fixTX():
+    _tag = model.Tag.query.filter_by(name='腾讯医典词条').first()
+    if not _tag:
+        _tag = model.Tag(name='腾讯医典词条')
+        db.session.add(_tag)
+        db.session.commit()
+    
+    projects = model.Project.query.all()
+    for project in projects:
+        print(project.id)
+        isOK = True
+        for tag in project.tags:
+            if tag.name == '样图' or tag.name == '腾讯医典词条':
+                isOK = False
+        if isOK:
+            project.tags.append(_tag)
+            db.session.commit()
+
+@app.cli.command()
 def fixTag():
     files = model.File.query.all()
     for file in files:

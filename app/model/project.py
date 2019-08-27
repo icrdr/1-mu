@@ -430,7 +430,6 @@ class Stage(db.Model):
     description = db.Column(db.String(512))
     # one-many: Project.stages-Stage.parent_project
     parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
-    start_date = db.Column(db.DateTime)
 
     # one-many: Phase.parent_stage-Stage.phases
     phases = db.relationship(

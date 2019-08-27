@@ -284,7 +284,7 @@ class UserProjectNotiecsApi(Resource):
         query = ProjectNotice.query.filter_by(to_user_id=user_id).order_by(ProjectNotice.id.desc())
 
         notices = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
-        for notice in notices:
+        for notice in query.all():
             notice.set_read()
 
         output = {
