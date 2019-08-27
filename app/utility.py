@@ -38,3 +38,5 @@ def excerptHtml(html,length=20):
         result = result[:length]+'...'
     return result
 
+def word2List(string):
+    return re.findall(r"[\w']+", string)

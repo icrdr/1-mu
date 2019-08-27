@@ -5,7 +5,7 @@ import shortuuid
 from psd_tools import PSDImage
 from PIL import Image
 from .post import Tag
-
+from ..utility import word2List
 FILE_TAG = db.Table(
     'file_tags',
     db.Column('tag_id', db.Integer,
@@ -66,7 +66,12 @@ class File(db.Model):
             new_file.public = True
         
         if tags:
+            all_tag_list = []
             for tag in tags:
+                tag_list = word2List(tag)
+                all_tag_list += tag_list
+
+            for tag in all_tag_list:
                 _tag = Tag.query.filter_by(name=tag).first()
                 if not _tag:
                     _tag = Tag(name=tag)

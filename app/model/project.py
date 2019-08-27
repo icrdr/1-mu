@@ -11,7 +11,7 @@ from .post import Tag
 import math
 import json
 import requests
-from ..utility import UTC2Local, excerptHtml
+from ..utility import UTC2Local, excerptHtml, word2List
 
 PROJECT_TAG = db.Table(
     'project_tags',
@@ -370,21 +370,6 @@ class Project(db.Model):
         )
         db.session.add(new_project)
 
-        # if group_id:
-        #     new_project.creator_group_id = group_id
-        # else:
-        #     new_group = Group(
-        #         name=title+'制作小组',
-        #         description=title
-        #     )
-        #     db.session.add(new_group)
-        #     for creator_id in creators:
-        #         creator = User.query.get(creator_id)
-        #         new_group.users.append(creator)
-        #     new_group.admins.append(User.query.get(creators[0]))
-
-        #     new_project.creator_group = new_group
-
         # create stage
         for stage in stages:
             new_stage = Stage(
@@ -400,7 +385,12 @@ class Project(db.Model):
             db.session.add(new_phase)
 
         if tags:
+            all_tag_list = []
             for tag in tags:
+                tag_list = word2List(tag)
+                all_tag_list += tag_list
+
+            for tag in all_tag_list:
                 _tag = Tag.query.filter_by(name=tag).first()
                 if not _tag:
                     _tag = Tag(name=tag)

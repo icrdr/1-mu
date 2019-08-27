@@ -10,6 +10,8 @@ import redis
 from pytz import utc
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import timedelta, datetime
+
+
 app = Flask(__name__)
 app.config.from_object(config[os.environ.get('FLASK_ENV')])
 
@@ -36,6 +38,7 @@ api = Api(app, doc='/api/doc/', version='1.0',
 CORS(app)
 
 from . import view, restful, model
+from .utility import word2List
 
 @app.cli.command()
 def update():
@@ -138,7 +141,7 @@ def fixTag():
             print(file.id)
             new_tags = []
             for tag in file.tags:
-                taglist = tag.name.split(',')
+                taglist = word2List(tag.name)
                 if len(taglist)>1:
                     for _t in taglist:
                         _tag = model.Tag.query.filter_by(name=_t).first()
@@ -153,6 +156,32 @@ def fixTag():
             for n_tag in new_tags:
                 file.tags.append(n_tag)
             db.session.commit()
+
+    projects = model.Project.query.all()
+    for project in projects:
+        if len(project.tags)>0:
+            print(project.id)
+            new_tags = []
+            for tag in project.tags:
+                taglist = word2List(tag.name)
+                if len(taglist)>1:
+                    for _t in taglist:
+                        _tag = model.Tag.query.filter_by(name=_t).first()
+                        if not _tag:
+                            _tag = model.Tag(name=_t)
+                            db.session.add(_tag)
+                        new_tags.append(_tag)
+                    db.session.delete(tag)
+                else:
+                    new_tags.append(tag)
+            project.tags = []
+            for n_tag in new_tags:
+                project.tags.append(n_tag)
+            db.session.commit()
+    none_tag = model.Tag.query.filter_by(name='').first()
+    if none_tag:
+        db.session.delete(none_tag)
+        db.session.commit()
 
 @app.cli.command()
 def doc():
