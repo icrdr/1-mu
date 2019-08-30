@@ -116,7 +116,7 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=10)\
     .add_argument('order', location='args', default='asc', choices=['asc', 'desc'])\
-    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date','status','creator_id','client_id','current_stage_index'])
+    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date','finish_date','status','creator_id','client_id','current_stage_index'])
 
 POST_PROJECT = reqparse.RequestParser()\
     .add_argument('title', required=True)\
@@ -191,7 +191,11 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.start_date.asc())
             else:
                 query = query.order_by(Project.start_date.desc())
-
+        elif args['order_by'] == 'finish_date':
+            if args['order'] == 'asc':
+                query = query.order_by(Project.finish_date.asc())
+            else:
+                query = query.order_by(Project.finish_date.desc())
         elif args['order_by'] == 'status':
             if args['order'] == 'asc':
                 query = query.order_by(Project.status.asc(), Project.id.desc())
