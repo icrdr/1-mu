@@ -135,8 +135,8 @@ def zipTask(self, project_id_list, mode):
                 foldername = '{}-{}'.format(project.title,
                                             project.current_stage().name)
 
-            for i, upload_file in enumerate(last_upload_phase.upload_files):
-                index_number = '{:03}'.format(i)
+            for j, upload_file in enumerate(last_upload_phase.upload_files):
+                index_number = '{:03}'.format(j)
 
                 # compress
                 if mode == 'compress' and upload_file.format in ['png', 'psd', 'bmp', 'tga', 'tiff', 'tif']:
