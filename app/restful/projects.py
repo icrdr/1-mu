@@ -109,6 +109,7 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('search', location='args')\
     .add_argument('tags', location='args')\
     .add_argument('start_date', location='args', action='split')\
+    .add_argument('finish_date', location='args', action='split')\
     .add_argument('current_stage_index', location='args', action='split')\
     .add_argument('status', location='args', action='split')\
     .add_argument('include', location='args', action='split')\
@@ -156,6 +157,13 @@ class PorjectsApi(Resource):
             end = datetime.strptime(args['start_date'][1], '%Y-%m-%d %H:%M:%S')
             
             query = query.filter(and_(Project.start_date <= end, Project.start_date >= start))
+
+        if args['finish_date']:
+            start = datetime.strptime(args['finish_date'][0], '%Y-%m-%d %H:%M:%S')
+            end = datetime.strptime(args['finish_date'][1], '%Y-%m-%d %H:%M:%S')
+            
+            query = query.filter(and_(Project.finish_date <= end, Project.finish_date >= start))
+
 
         if args['current_stage_index']:
             query = query.filter(Project.current_stage_index.in_(args['current_stage_index']))

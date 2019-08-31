@@ -84,7 +84,6 @@ class File(db.Model):
         if format in ['png','jpg','psd','jpeg','gif','bmp','tga','tiff','tif']:
             try:
                 im_path = os.path.join(path, filename)
-                im = None
                 if format == 'psd':
                     psd = PSDImage.open(im_path)
                     im = psd.compose()
