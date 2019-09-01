@@ -122,12 +122,15 @@ def zipTask(self, project_id_list, mode):
 
     for i, project in enumerate(project_list):
         phase = project.current_phase()
-
-        last_upload_phase = None
-
-        for phase in project.phases:
-            if len(phase.upload_files) > 0:
-                last_upload_phase = phase
+        stage = project.current_stage()
+        if phase.upload_date:
+            last_upload_phase = stage.phases[-1]
+        elif len(stage.phases) > 1:
+            last_upload_phase = stage.phases[-2]
+        elif project.current_stage_index > 0:
+            last_upload_phase = project.stages[project.current_stage_index-1].phases[-1]
+        else:
+            last_upload_phase = None
 
         if last_upload_phase:
             foldername = project.title
