@@ -249,7 +249,6 @@ class PorjectsApi(Resource):
         projects = query.limit(args['pre_page']).offset(
             (args['page']-1)*args['pre_page']).all()
 
-        print(projects)
         output = {
             'projects': projects,
             'total': total
