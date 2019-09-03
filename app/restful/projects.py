@@ -103,7 +103,7 @@ M_PROJECTS = api.model('projects', {
 
 GET_PROJECT = reqparse.RequestParser()\
     .add_argument('creator_id', location='args', action='split')\
-    .add_argument('group_id', location='args', action='split')\
+    .add_argument('participant_id', location='args')\
     .add_argument('client_id', location='args', action='split')\
     .add_argument('title', location='args')\
     .add_argument('search', location='args')\
@@ -141,9 +141,9 @@ class PorjectsApi(Resource):
             query = query.filter(
                 Project.creator_user_id.in_(args['creator_id']))
 
-        if args['group_id']:
-            query = query.filter(
-                Project.creator_group_id.in_(args['group_id']))
+        if args['participant_id']:
+            query = query.filter(or_(Project.phases.any(
+                creator_user_id=args['participant_id']), Project.creator_user_id.in_(args['participant_id'])))
 
         if args['client_id']:
             query = query.filter(Project.client_user_id.in_(args['client_id']))
@@ -189,6 +189,8 @@ class PorjectsApi(Resource):
             query = query.filter(Project.id.in_(args['include']))
         elif args['exclude']:
             query = query.filter(Project.id.notin_(args['exclude']))
+
+        query = query.from_self()
 
         if args['order_by'] == 'id':
             if args['order'] == 'asc':
@@ -246,6 +248,7 @@ class PorjectsApi(Resource):
         total = len(query.all())
         projects = query.limit(args['pre_page']).offset(
             (args['page']-1)*args['pre_page']).all()
+
         output = {
             'projects': projects,
             'total': total
@@ -464,6 +467,8 @@ class PorjectPostponeApi(Resource):
 FINISH_PROJECT = reqparse.RequestParser()\
     .add_argument('feedback', default='没有建议')\
 
+
+
 @N_PROJECT.route('/<int:project_id>/finish')
 class PorjectFinishApi(Resource):
     @api.marshal_with(M_PROJECT)
@@ -574,7 +579,9 @@ class PorjectgoBackApi(Resource):
 N_DASH = api.namespace('api/dashboard', description='projects operations')
 
 GET_DASH = reqparse.RequestParser()\
-    .add_argument('finish_date', required=True,location='args', action='split')\
+    .add_argument('finish_date', required=True, location='args', action='split')\
+
+
 
 @N_DASH.route('/<int:user_id>')
 class DashboardApi(Resource):
@@ -594,7 +601,7 @@ class DashboardApi(Resource):
 
         stages = Stage.query.join(Stage.phases).join(Stage.parent_project)\
             .filter(Project.status == 'finish')\
-            .filter( and_(Project.finish_date <= end, Project.finish_date >= start))\
+            .filter(and_(Project.finish_date <= end, Project.finish_date >= start))\
             .filter(Phase.creator_user_id == user_id).all()
 
         phases = Phase.query.join(Phase.parent_project)\
