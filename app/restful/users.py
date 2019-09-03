@@ -6,7 +6,7 @@ from ..utility import buildUrl, getAvatar
 from werkzeug.security import generate_password_hash
 from .decorator import permission_required, admin_required
 PERMISSIONS = app.config['PERMISSIONS']
-n_user = api.namespace('api/users', description='User Operations')
+N_USER = api.namespace('api/users', description='User Operations')
 
 m_wx_user = api.model('user', {
     'id': fields.Integer(description="Unique identifier for the user."),
@@ -112,7 +112,7 @@ d_user.add_argument('user_id', location='args', action='split', required=True,
                     role provided. Accepts list or single role.")
 
 
-@n_user.route('')
+@N_USER.route('')
 class UsersApi(Resource):
     @api.expect(g_user)
     # @permission_required()
@@ -221,7 +221,7 @@ class UsersApi(Resource):
         else:
             api.abort(400, "user doesn't exist")
 
-@n_user.route('/<int:user_id>')
+@N_USER.route('/<int:user_id>')
 class UserApi(Resource):
     @api.marshal_with(M_USER)
     def get(self, user_id):
@@ -272,27 +272,56 @@ M_PROJECT_NOTICES = api.model('project_notices', {
     'unread': fields.Integer,
 })
 
-G_PROJECT_NOTICE = reqparse.RequestParser()
-G_PROJECT_NOTICE.add_argument('page', location='args', type=int, default=1)
-G_PROJECT_NOTICE.add_argument('pre_page', location='args', type=int, default=10)
+N_PROJECT_NOTICE = api.namespace('api/project_notices', description='User Operations')
 
-@n_user.route('/<int:user_id>/project_notices')
+G_PROJECT_NOTICE = reqparse.RequestParser()\
+    .add_argument('user_id', location='args', type=int, required=True )\
+    .add_argument('only_unread', location='args', type=int, default=1)\
+    .add_argument('page', location='args', type=int, default=1)\
+    .add_argument('pre_page', location='args', type=int, default=10)\
+
+U_PROJECT_NOTICE = reqparse.RequestParser()\
+    .add_argument('user_id', type=int, required=True )\
+
+@N_PROJECT_NOTICE.route('')
 class UserProjectNotiecsApi(Resource):
-    def get(self, user_id):
+    def get(self):
         args = G_PROJECT_NOTICE.parse_args()
-        user = userCheck(user_id)
-        query = ProjectNotice.query.filter_by(to_user_id=user_id).order_by(ProjectNotice.id.desc())
+        user = userCheck(args['user_id'])
+        query = ProjectNotice.query.filter_by(to_user_id=args['user_id']).filter_by(read=False)
+        total = query.all()
+        unread = query.filter_by(read=False).all()
 
-        notices = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
-        for notice in query.all():
-            notice.set_read()
+        if(args['only_unread']):
+            query = query.filter_by(read=False)
+
+        notices = query.order_by(ProjectNotice.id.desc()).limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
 
         output = {
             'project_notices': notices,
-            'total': len(query.all()),
-            'unread':len(query.filter_by(read=False).all())
+            'total': len(total),
+            'unread':len(unread)
         }
         return marshal(output, M_PROJECT_NOTICES, skip_none=True), 200
+    
+    def put(self):
+        args = U_PROJECT_NOTICE.parse_args()
+        user = userCheck(args['user_id'])
+        query = ProjectNotice.query.filter_by(to_user_id=args['user_id']).filter_by(read=False).order_by(ProjectNotice.id.desc())
+
+        notices = query.all()
+        for notice in query.all():
+            notice.set_read()
+
+        return {'message': 'ok'}, 200
+
+@N_PROJECT_NOTICE.route('/<int:notice_id>')
+class UserProjectNotiecApi(Resource): 
+    def put(self, notice_id):
+        notice = projectNoticeCheck(notice_id)
+        notice.set_read()
+
+        return {'message': 'ok'}, 200
 
 N_GROUP = api.namespace('api/groups', description='Group Operations')
 
@@ -447,3 +476,10 @@ def userCheck(user_id):
         api.abort(400, "user is not exist.")
     else:
         return user
+
+def projectNoticeCheck(notice_id):
+    notice = ProjectNotice.query.get(notice_id)
+    if not notice:
+        api.abort(400, "notice is not exist.")
+    else:
+        return notice

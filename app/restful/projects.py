@@ -117,7 +117,7 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=10)\
     .add_argument('order', location='args', default='asc', choices=['asc', 'desc'])\
-    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date','finish_date','status','creator_id','client_id','current_stage_index'])
+    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date', 'finish_date', 'status', 'creator_id', 'client_id', 'current_stage_index'])
 
 POST_PROJECT = reqparse.RequestParser()\
     .add_argument('title', required=True)\
@@ -138,10 +138,12 @@ class PorjectsApi(Resource):
         args = GET_PROJECT.parse_args()
         query = Project.query
         if args['creator_id']:
-            query = query.filter(Project.creator_user_id.in_(args['creator_id']))
+            query = query.filter(
+                Project.creator_user_id.in_(args['creator_id']))
 
         if args['group_id']:
-            query = query.filter(Project.creator_group_id.in_(args['group_id']))
+            query = query.filter(
+                Project.creator_group_id.in_(args['group_id']))
 
         if args['client_id']:
             query = query.filter(Project.client_user_id.in_(args['client_id']))
@@ -153,27 +155,33 @@ class PorjectsApi(Resource):
             query = query.filter(Project.status.in_(args['status']))
 
         if args['start_date']:
-            start = datetime.strptime(args['start_date'][0], '%Y-%m-%d %H:%M:%S')
+            start = datetime.strptime(
+                args['start_date'][0], '%Y-%m-%d %H:%M:%S')
             end = datetime.strptime(args['start_date'][1], '%Y-%m-%d %H:%M:%S')
-            
-            query = query.filter(and_(Project.start_date <= end, Project.start_date >= start))
+
+            query = query.filter(
+                and_(Project.start_date <= end, Project.start_date >= start))
 
         if args['finish_date']:
-            start = datetime.strptime(args['finish_date'][0], '%Y-%m-%d %H:%M:%S')
-            end = datetime.strptime(args['finish_date'][1], '%Y-%m-%d %H:%M:%S')
-            
-            query = query.filter(and_(Project.finish_date <= end, Project.finish_date >= start))
+            start = datetime.strptime(
+                args['finish_date'][0], '%Y-%m-%d %H:%M:%S')
+            end = datetime.strptime(
+                args['finish_date'][1], '%Y-%m-%d %H:%M:%S')
 
+            query = query.filter(
+                and_(Project.finish_date <= end, Project.finish_date >= start))
 
         if args['current_stage_index']:
-            query = query.filter(Project.current_stage_index.in_(args['current_stage_index']))
+            query = query.filter(Project.current_stage_index.in_(
+                args['current_stage_index']))
 
         if args['search']:
             query = query.join(Project.tags).filter(
                 or_(Project.title.contains(args['search']), Tag.name.contains(args['search'])))
-                
+
         if args['tags']:
-            query = query.join(Project.tags).filter(Tag.name.contains(args['tags']))
+            query = query.join(Project.tags).filter(
+                Tag.name.contains(args['tags']))
 
         if args['include']:
             if args['exclude']:
@@ -193,7 +201,7 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.title.asc(), Project.id.desc())
             else:
                 query = query.order_by(Project.title.desc(), Project.id.desc())
-                
+
         elif args['order_by'] == 'start_date':
             if args['order'] == 'asc':
                 query = query.order_by(Project.start_date.asc())
@@ -208,28 +216,36 @@ class PorjectsApi(Resource):
             if args['order'] == 'asc':
                 query = query.order_by(Project.status.asc(), Project.id.desc())
             else:
-                query = query.order_by(Project.status.desc(), Project.id.desc())
+                query = query.order_by(
+                    Project.status.desc(), Project.id.desc())
 
         elif args['order_by'] == 'current_stage_index':
             if args['order'] == 'asc':
-                query = query.order_by(Project.current_stage_index.asc(), Project.status.desc(), Project.id.desc())
+                query = query.order_by(Project.current_stage_index.asc(
+                ), Project.status.desc(), Project.id.desc())
             else:
-                query = query.order_by(Project.current_stage_index.desc(), Project.status.desc(), Project.id.desc())
+                query = query.order_by(Project.current_stage_index.desc(
+                ), Project.status.desc(), Project.id.desc())
 
         elif args['order_by'] == 'creator_id':
             if args['order'] == 'asc':
-                query = query.join(Project.creator).order_by(User.id.asc(), Project.status.desc(), Project.id.desc())
+                query = query.join(Project.creator).order_by(
+                    User.id.asc(), Project.status.desc(), Project.id.desc())
             else:
-                query = query.join(Project.creator).order_by(User.id.desc(), Project.status.desc(), Project.id.desc())
+                query = query.join(Project.creator).order_by(
+                    User.id.desc(), Project.status.desc(), Project.id.desc())
 
         elif args['order_by'] == 'client_id':
             if args['order'] == 'asc':
-                query = query.join(Project.client).order_by(User.id.asc(), Project.status.desc(), Project.id.desc())
+                query = query.join(Project.client).order_by(
+                    User.id.asc(), Project.status.desc(), Project.id.desc())
             else:
-                query = query.join(Project.client).order_by(User.id.desc(), Project.status.desc(), Project.id.desc())
-            
+                query = query.join(Project.client).order_by(
+                    User.id.desc(), Project.status.desc(), Project.id.desc())
+
         total = len(query.all())
-        projects = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
+        projects = query.limit(args['pre_page']).offset(
+            (args['page']-1)*args['pre_page']).all()
         output = {
             'projects': projects,
             'total': total
@@ -243,7 +259,8 @@ class PorjectsApi(Resource):
         args = POST_PROJECT.parse_args()
         # permission checking
         if not g.current_user.can(PERMISSIONS['EDIT']):
-            api.abort(403, "Poster must be one of the creators(Administrator privileges required).")
+            api.abort(
+                403, "Poster must be one of the creators(Administrator privileges required).")
         if not User.query.get(args['client_id']):
             api.abort(401, "Client is not exist.")
         if not User.query.get(args['creator_id']):
@@ -310,13 +327,13 @@ class PorjectApi(Resource):
                 project.design = args['design']
             if args['remark'] != None:
                 project.remark = args['remark']
-            
+
             if args['files']:
                 project.files = []
                 for file_id in args['files']:
                     file = File.query.get(file_id)
                     project.files.append(file)
-            
+
             db.session.commit()
             print(project.creator_user_id)
             return project, 201
@@ -415,9 +432,11 @@ class PorjectModifyApi(Resource):
         except Exception as error:
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
-            
+
+
 POSTPONE_PROJECT = reqparse.RequestParser()\
     .add_argument('days', type=int, required=True)
+
 
 @N_PROJECT.route('/<int:project_id>/postpone')
 class PorjectPostponeApi(Resource):
@@ -440,6 +459,7 @@ class PorjectPostponeApi(Resource):
         except Exception as error:
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
+
 
 FINISH_PROJECT = reqparse.RequestParser()\
     .add_argument('feedback', default='没有建议')\
@@ -499,6 +519,7 @@ class PorjectResumeApi(Resource):
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
+
 @N_PROJECT.route('/<int:project_id>/abnormal')
 class PorjectAbnormalApi(Resource):
     @api.marshal_with(M_PROJECT)
@@ -514,6 +535,7 @@ class PorjectAbnormalApi(Resource):
         except Exception as error:
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
+
 
 @N_PROJECT.route('/<int:project_id>/pause')
 class PorjectPauseApi(Resource):
@@ -531,6 +553,7 @@ class PorjectPauseApi(Resource):
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
+
 @N_PROJECT.route('/<int:project_id>/back')
 class PorjectgoBackApi(Resource):
     @api.marshal_with(M_PROJECT)
@@ -547,9 +570,64 @@ class PorjectgoBackApi(Resource):
             print(error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
+
+N_DASH = api.namespace('api/dashboard', description='projects operations')
+
+GET_DASH = reqparse.RequestParser()\
+    .add_argument('finish_date', required=True,location='args', action='split')\
+
+@N_DASH.route('/<int:user_id>')
+class DashboardApi(Resource):
+    def get(self, user_id):
+        args = GET_DASH.parse_args()
+        user = userCheck(user_id)
+
+        start = datetime.strptime(
+            args['finish_date'][0], '%Y-%m-%d %H:%M:%S')
+        end = datetime.strptime(
+            args['finish_date'][1], '%Y-%m-%d %H:%M:%S')
+
+        projects = Project.query.join(Project.phases)\
+            .filter(Project.status == 'finish')\
+            .filter(and_(Project.finish_date <= end, Project.finish_date >= start))\
+            .filter(Phase.creator_user_id == user_id).all()
+
+        stages = Stage.query.join(Stage.phases).join(Stage.parent_project)\
+            .filter(Project.status == 'finish')\
+            .filter( and_(Project.finish_date <= end, Project.finish_date >= start))\
+            .filter(Phase.creator_user_id == user_id).all()
+
+        phases = Phase.query.join(Phase.parent_project)\
+            .filter(Project.status == 'finish')\
+            .filter(and_(Project.finish_date <= end, Project.finish_date >= start))\
+            .filter(Phase.creator_user_id == user_id).all()
+
+        overtime = 0
+        for phase in phases:
+            duration = phase.upload_date - phase.deadline_date
+            duration_in_s = int(duration.total_seconds())
+            if duration_in_s > 0:
+                overtime += duration_in_s
+
+        return {
+            'done_overtime': overtime,
+            'done_phases': len(phases),
+            'done_stages': len(stages),
+            'done_projects': len(projects)
+        }, 200
+
+
 def projectCheck(project_id):
     project = Project.query.get(project_id)
     if not project:
         api.abort(400, "Project is not exist.")
     else:
         return project
+
+
+def userCheck(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        api.abort(400, "user is not exist.")
+    else:
+        return user
