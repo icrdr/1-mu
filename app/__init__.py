@@ -102,7 +102,6 @@ def fixCreator():
 
 @app.cli.command()
 def fixStage():
-    
     stages = model.Stage.query.all()
     for stage in stages:
         print(stage)
@@ -116,6 +115,8 @@ def fixStage():
         print(phases)
         if not phase.start_date:
             db.session.delete(phase)
+        if not phase.parent_stage_id:
+            phase.parent_project.stages[-1].phases.append(phase)
 
     db.session.commit()
 
