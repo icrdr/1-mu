@@ -109,8 +109,10 @@ def fixStage():
         if len(project.stages)==3:
             project.stages[0].name = '草图'
             project.stages[1].name = '成图'
-            for phase in project.stages[2].phases:
-                project.stages[1].phases.append(phase)
+            if project.current_stage_index==2:
+                project.current_stage_index=1
+                for phase in project.stages[2].phases:
+                    project.stages[1].phases.append(phase)
             db.session.delete(project.stages[2])
         db.session.commit()
 
