@@ -2,7 +2,7 @@ from flask_restplus import Resource, reqparse, fields, marshal
 from flask import g, request
 from .. import api, db, app
 from ..model import User, Group, ProjectNotice
-from ..utility import buildUrl, getAvatar
+from ..utility import buildUrl, getAvatar,getStageIndex,getPhaseIndex
 from werkzeug.security import generate_password_hash
 from .decorator import permission_required, admin_required
 PERMISSIONS = app.config['PERMISSIONS']
@@ -261,10 +261,13 @@ M_PROJECT_NOTICE = api.model('project_notice', {
     'parent_project': fields.Nested(M_MIN_PROJECT),
     'parent_phase': fields.Nested(M_MIN_PHASE),
     'parent_stage': fields.Nested(M_MIN_STAGE),
+    'stage_index': fields.Integer(attribute=lambda x: getStageIndex(x.parent_stage)),
+    'phase_index': fields.Integer(attribute=lambda x: getPhaseIndex(x.parent_phase)),
     'cover_url': fields.String(attribute=lambda x: buildUrl(x.cover_url)),
     'content': fields.String(),
     'read': fields.Integer()
 })
+            
 
 M_PROJECT_NOTICES = api.model('project_notices', {
     'project_notices': fields.List(fields.Nested(M_PROJECT_NOTICE)),

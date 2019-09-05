@@ -11,7 +11,7 @@ from .post import Tag
 import math
 import json
 import requests
-from ..utility import UTC2Local, excerptHtml, word2List
+from ..utility import UTC2Local, excerptHtml, word2List, getPhaseIndex, getStageIndex
 
 PROJECT_TAG = db.Table(
     'project_tags',
@@ -117,8 +117,8 @@ class Project(db.Model):
         new_phase = Phase(
             parent_stage=self.current_stage(),
             parent_project=self,
-            start_date = datetime.utcnow(),
-            deadline_date = deadline
+            start_date=datetime.utcnow(),
+            deadline_date=deadline
         )
         db.session.add(new_phase)
 
@@ -154,7 +154,7 @@ class Project(db.Model):
                 parent_stage=self.current_stage(),
             )
             days_need = math.floor(self.current_stage(
-                ).days_need*0.2)+1
+            ).days_need*0.2)+1
             db.session.add(new_phase)
             deadline = datetime.utcnow() + timedelta(days=days_need)
 
@@ -225,17 +225,34 @@ class Project(db.Model):
     def goBack(self):
         """go back"""
         print('go back')
-        if self.current_stage_index > 0:
-            if self.status == 'finish':
-                pass
-            else:
-                self.current_stage_index -= 1
-
+        if self.status == 'finish':
+            deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need)
+            new_phase = Phase(
+                parent_stage=self.current_stage(),
+                parent_project=self,
+                start_date=datetime.utcnow(),
+                deadline_date=deadline
+            )
+            db.session.add(new_phase)
             self.status = 'progress'
-            resetCurrentStage(self)
-            
+            addDelayCounter(self.id, deadline)
+            db.session.commit()
+        elif self.current_stage_index > 0:
+            self.current_stage().phases = []
+            self.current_stage_index -= 1
+            deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need)
+            new_phase = Phase(
+                parent_stage=self.current_stage(),
+                parent_project=self,
+                start_date=datetime.utcnow(),
+                deadline_date=deadline
+            )
+            db.session.add(new_phase)
+            self.status = 'progress'
+            addDelayCounter(self.id, deadline)
+            db.session.commit()
         else:
-            resetCurrentStage(self)
+            self.current_stage().phases = []
             self.status = 'await'
             removeDelayCounter(self.id)
             db.session.commit()
@@ -428,9 +445,9 @@ class Phase(db.Model):
     parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
     parent_stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
 
-    # remove it 
+    # remove it
     days_need = db.Column(db.Integer)
-    
+
     creator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     creator = db.relationship('User', foreign_keys=creator_user_id, backref=db.backref(
         'Phases_as_creator', lazy=True))
@@ -567,12 +584,12 @@ def nextStageStart(project):
         next_stage = project.stages[project.current_stage_index]
 
         project.status = 'progress'
-        
+
         deadline = datetime.utcnow() + timedelta(days=next_stage.days_need)
         new_phase = Phase(
-            parent_stage=project.next_stage(),
+            parent_stage=next_stage,
             parent_project=project,
-            deadline_date = deadline
+            deadline_date=deadline
         )
         db.session.add(new_phase)
 
@@ -580,22 +597,6 @@ def nextStageStart(project):
         addDelayCounter(project.id, deadline)
     else:
         project.finish_date = datetime.utcnow()
-
-
-def resetCurrentStage(project):
-    # reset current stage
-    project.current_stage().phases = []
-
-    deadline = datetime.utcnow() + timedelta(days=project.current_stage().days_need)
-    new_phase = Phase(
-        parent_project=project,
-        parent_stage=project.current_stage(),
-        deadline_date = deadline
-    )
-    db.session.add(new_phase)
-    # create a new delay counter
-    addDelayCounter(project.id, deadline)
-    db.session.commit()
 
 
 def wx_message(notice):
@@ -613,7 +614,7 @@ def wx_message(notice):
         data = {
             "touser": notice.to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-            "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
+            "url": "http://beta.1-mu.net/projects/{}?stage_index={}&phase_index={}".format(notice.parent_project_id, getStageIndex(notice.parent_stage), getPhaseIndex(notice.parent_phase)),
             "data": {
                 "first": {
                     "value": "企划名：{}-{}".format(notice.parent_project.title, notice.parent_stage.name),
@@ -627,7 +628,7 @@ def wx_message(notice):
                     "color": "#8c8c8c"
                 },
                 "remark": {
-                    "value": "说明：{}".format(excerptHtml(notice.content,40)),
+                    "value": "说明：{}".format(excerptHtml(notice.content, 40)),
                     "color": "#8c8c8c"
                 }
             }
@@ -636,7 +637,7 @@ def wx_message(notice):
         data = {
             "touser": notice.to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-            "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
+            "url": "http://beta.1-mu.net/projects/{}?stage_index={}&phase_index={}".format(notice.parent_project_id, getStageIndex(notice.parent_stage), getPhaseIndex(notice.parent_phase)),
             "data": {
                 "first": {
                     "value": "企划名：{}-{}".format(notice.parent_project.title, notice.parent_stage.name),
@@ -650,7 +651,7 @@ def wx_message(notice):
                     "color": "#8c8c8c"
                 },
                 "remark": {
-                    "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content,40)),
+                    "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content, 40)),
                     "color": "#8c8c8c"
                 }
             }
@@ -659,7 +660,7 @@ def wx_message(notice):
         data = {
             "touser": notice.to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-            "url": "http://beta.1-mu.net/projects/{}/stages/{}/phases/{}".format(notice.parent_project_id, notice.parent_stage_id, notice.parent_phase_id),
+            "url": "http://beta.1-mu.net/projects/{}?stage_index={}&phase_index={}".format(notice.parent_project_id, getStageIndex(notice.parent_stage), getPhaseIndex(notice.parent_phase)),
             "data": {
                 "first": {
                     "value": "企划名：{}-{}".format(notice.parent_project.title, notice.parent_stage.name),
@@ -673,7 +674,7 @@ def wx_message(notice):
                     "color": "#8c8c8c"
                 },
                 "remark": {
-                    "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content,40)),
+                    "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content, 40)),
                     "color": "#8c8c8c"
                 }
             }
