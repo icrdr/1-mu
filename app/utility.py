@@ -33,17 +33,21 @@ def UTC2Local(date):
 def getStageIndex(stage):
     project = stage.parent_project
     index = 0
-    for i, s in enumerate(project.stages):
-        if s.id == stage.id:
-            index =i
+    if project:
+        for i, s in enumerate(project.stages):
+            if s.id == stage.id:
+                index =i
     return index
 
 def getPhaseIndex(phase):
     stage = phase.parent_stage
+    print(phase)
+    print(stage)
     index = 0
-    for i, p in enumerate(stage.phases):
-        if p.id == phase.id:
-            index =i
+    if stage:
+        for i, p in enumerate(stage.phases):
+            if p.id == phase.id:
+                index =i
     return index
 def excerptHtml(html,length=20):
     pattern = re.compile(r'<[^>]+>',re.S)

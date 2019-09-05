@@ -581,8 +581,6 @@ N_DASH = api.namespace('api/dashboard', description='projects operations')
 GET_DASH = reqparse.RequestParser()\
     .add_argument('finish_date', required=True, location='args', action='split')\
 
-
-
 @N_DASH.route('/<int:user_id>')
 class DashboardApi(Resource):
     def get(self, user_id):
