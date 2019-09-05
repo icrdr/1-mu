@@ -101,6 +101,20 @@ def fixCreator():
         db.session.commit()
 
 @app.cli.command()
+def fixStage():
+    projects = model.Project.query.join(model.Project.tags).filter(
+                model.Tag.name=='腾讯医典词条').all()
+    for project in projects:
+        print(project.id)
+        if len(project.stages)==3:
+            project.stages[0].name = '草图'
+            project.stages[1].name = '成图'
+            for phase in project.stages[2].phases:
+                project.stages[1].phases.append(phase)
+            db.session.delete(project.stages[2])
+        db.session.commit()
+
+@app.cli.command()
 def fixDiscard():
     projects = model.Project.query.all()
     for project in projects:
