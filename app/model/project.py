@@ -305,16 +305,19 @@ class Project(db.Model):
         """postpone this stage."""
         # current phase update
         self.current_stage().days_need += days
-        # create a new delay counter
-        if len(self.current_stage().phases) > 1:
-            self.status = 'modify'
-        else:
-            self.status = 'progress'
-
+        
         deadline = self.current_phase().start_date + \
             timedelta(days=self.current_stage().days_need)
-        self.current_phase().deadline = deadline
-        addDelayCounter(self.id, deadline)
+        self.current_phase().deadline_date = deadline
+
+        if deadline>datetime.utcnow():
+            if len(self.current_stage().phases) > 1:
+                self.status = 'modify'
+            else:
+                self.status = 'progress'
+
+            # create a new delay counter
+            addDelayCounter(self.id, deadline)
         db.session.commit()
         return self
 
