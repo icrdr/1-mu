@@ -57,7 +57,6 @@ M_PAUSE = api.model('pause', {
 
 M_PHASE = api.model('phase', {
     'id': fields.Integer,
-    'days_need': fields.Integer,
     'upload_date': fields.String,
     'feedback_date': fields.String,
     'start_date': fields.String,
@@ -73,6 +72,7 @@ M_PHASE = api.model('phase', {
 M_STAGE = api.model('stage', {
     'id': fields.Integer,
     'name': fields.String,
+    'days_need': fields.Integer,
     'phases': fields.List(fields.Nested(M_PHASE))
 })
 M_GROUP = api.model('group', {

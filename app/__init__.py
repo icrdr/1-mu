@@ -102,19 +102,22 @@ def fixCreator():
 
 @app.cli.command()
 def fixStage():
-    projects = model.Project.query.join(model.Project.tags).filter(
-                model.Tag.name=='腾讯医典词条').all()
-    for project in projects:
-        print(project.id)
-        if len(project.stages)==3:
-            project.stages[0].name = '草图'
-            project.stages[1].name = '成图'
-            if project.current_stage_index==2:
-                project.current_stage_index=1
-                for phase in project.stages[2].phases:
-                    project.stages[1].phases.append(phase)
-            db.session.delete(project.stages[2])
-        db.session.commit()
+    
+    stages = model.Stage.query.all()
+    for stage in stages:
+        print(stage)
+        if stage.phases:
+            stage.days_need = stage.phases[0].days_need
+        else:
+            stage.days_need = 7
+
+    phases = model.Phase.query.all()
+    for phase in phases:
+        print(phases)
+        if not phase.start_date:
+            db.session.delete(phase)
+
+    db.session.commit()
 
 @app.cli.command()
 def fixDiscard():

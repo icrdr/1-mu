@@ -89,7 +89,7 @@ class Project(db.Model):
     stages = db.relationship(
         'Stage', backref=db.backref('parent_project', lazy=True))
     phases = db.relationship(
-        'Phase', backref=db.backref('parent_project', lazy=True))
+        'Phase', order_by="Phase.start_date", backref=db.backref('parent_project', lazy=True))
     current_stage_index = db.Column(db.Integer, default=0)
 
     # one-many: Propose.parent_project-Project.Proposes
@@ -112,9 +112,15 @@ class Project(db.Model):
         # start project
         self.status = 'progress'
         self.start_date = datetime.utcnow()
-        self.current_phase().start_date = datetime.utcnow()
-        deadline = datetime.utcnow() + timedelta(days=self.current_phase().days_need)
-        self.current_phase().deadline_date = deadline
+
+        deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need)
+        new_phase = Phase(
+            parent_stage=self.current_stage(),
+            parent_project=self,
+            start_date = datetime.utcnow(),
+            deadline_date = deadline
+        )
+        db.session.add(new_phase)
 
         # create a new delay counter
         addDelayCounter(self.id, deadline)
@@ -146,12 +152,11 @@ class Project(db.Model):
             new_phase = Phase(
                 parent_project=self,
                 parent_stage=self.current_stage(),
-                start_date=datetime.utcnow(),
-                days_need=math.floor(self.current_stage(
-                ).phases[0].days_need*0.2)+1,  # 4 days later
             )
+            days_need = math.floor(self.current_stage(
+                ).days_need*0.2)+1
             db.session.add(new_phase)
-            deadline = datetime.utcnow() + timedelta(days=new_phase.days_need)
+            deadline = datetime.utcnow() + timedelta(days=days_need)
 
             new_phase.deadline_date = deadline
             wx_message(new_notice)
@@ -224,23 +229,11 @@ class Project(db.Model):
             if self.status == 'finish':
                 pass
             else:
-                resetCurrentStage(self)
                 self.current_stage_index -= 1
 
             self.status = 'progress'
-            new_phase = Phase(
-                parent_project=self,
-                parent_stage=self.current_stage(),
-                start_date=datetime.utcnow(),
-                days_need=self.current_stage(
-                ).phases[0].days_need,  # 4 days later
-            )
-            db.session.add(new_phase)
-            deadline = datetime.utcnow() + timedelta(days=new_phase.days_need)
-            new_phase.deadline_date = deadline
-            # create a new delay counter
-            addDelayCounter(self.id, deadline)
-            db.session.commit()
+            resetCurrentStage(self)
+            
         else:
             resetCurrentStage(self)
             self.status = 'await'
@@ -279,8 +272,8 @@ class Project(db.Model):
             # create a new delay counter
             offset = self.current_phase().start_date - \
                 self.current_phase().pauses[-1].pause_date
-            if timedelta(days=self.current_phase().days_need) > self.current_phase().pauses[-1].pause_date - self.current_phase().start_date:
-                deadline = datetime.utcnow() + timedelta(days=self.current_phase().days_need) + offset
+            if timedelta(days=self.current_stage().days_need) > self.current_phase().pauses[-1].pause_date - self.current_phase().start_date:
+                deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need) + offset
                 self.current_phase().deadline_date = deadline
                 addDelayCounter(self.id, deadline)
             else:
@@ -294,7 +287,7 @@ class Project(db.Model):
     def postpone(self, days):
         """postpone this stage."""
         # current phase update
-        self.current_phase().days_need += days
+        self.current_stage().days_need += days
         # create a new delay counter
         if len(self.current_stage().phases) > 1:
             self.status = 'modify'
@@ -302,7 +295,7 @@ class Project(db.Model):
             self.status = 'progress'
 
         deadline = self.current_phase().start_date + \
-            timedelta(days=self.current_phase().days_need)
+            timedelta(days=self.current_stage().days_need)
         self.current_phase().deadline = deadline
         addDelayCounter(self.id, deadline)
         db.session.commit()
@@ -375,14 +368,9 @@ class Project(db.Model):
             new_stage = Stage(
                 name=stage['stage_name'],
                 parent_project=new_project,
-            )
-            db.session.add(new_stage)
-            new_phase = Phase(
-                parent_stage=new_stage,
-                parent_project=new_project,
                 days_need=stage['days_need']
             )
-            db.session.add(new_phase)
+            db.session.add(new_stage)
 
         if tags:
             all_tag_list = []
@@ -421,14 +409,16 @@ class Stage(db.Model):
     # one-many: Project.stages-Stage.parent_project
     parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
 
+    days_need = db.Column(db.Integer)
+
     # one-many: Phase.parent_stage-Stage.phases
     phases = db.relationship(
-        'Phase', backref=db.backref('parent_stage', lazy=True))
+        'Phase', order_by="Phase.start_date", backref=db.backref('parent_stage', lazy=True))
     notices = db.relationship(
         'ProjectNotice', backref=db.backref('parent_stage', lazy=True))
 
     def __repr__(self):
-        return '<Stage %r>' % self.name
+        return '<Stage %r>' % self.id
 
 
 class Phase(db.Model):
@@ -437,8 +427,10 @@ class Phase(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
     parent_stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
-    days_need = db.Column(db.Integer)
 
+    # remove it 
+    days_need = db.Column(db.Integer)
+    
     creator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     creator = db.relationship('User', foreign_keys=creator_user_id, backref=db.backref(
         'Phases_as_creator', lazy=True))
@@ -451,7 +443,7 @@ class Phase(db.Model):
     client_feedback = db.Column(db.Text)
     feedback_date = db.Column(db.DateTime)
 
-    start_date = db.Column(db.DateTime)
+    start_date = db.Column(db.DateTime, default=datetime.utcnow)
     deadline_date = db.Column(db.DateTime)
 
     # many-many: File.phases-Phase.files
@@ -575,13 +567,16 @@ def nextStageStart(project):
         next_stage = project.stages[project.current_stage_index]
 
         project.status = 'progress'
-        next_stage.start_date = datetime.utcnow()
+        
+        deadline = datetime.utcnow() + timedelta(days=next_stage.days_need)
+        new_phase = Phase(
+            parent_stage=project.next_stage(),
+            parent_project=project,
+            deadline_date = deadline
+        )
+        db.session.add(new_phase)
 
         # create a new delay counter
-        new_phase = next_stage.phases[0]
-        new_phase.start_date = datetime.utcnow()
-        deadline = datetime.utcnow() + timedelta(days=new_phase.days_need)
-        new_phase.deadline_date = deadline
         addDelayCounter(project.id, deadline)
     else:
         project.finish_date = datetime.utcnow()
@@ -589,17 +584,18 @@ def nextStageStart(project):
 
 def resetCurrentStage(project):
     # reset current stage
-    days_need = project.current_stage().phases[0].days_need
-    for phase in project.current_stage().phases:
-        db.session.delete(phase)
-
     project.current_stage().phases = []
-    first_phase = Phase(
-        parent_stage=project.current_stage(),
+
+    deadline = datetime.utcnow() + timedelta(days=project.current_stage().days_need)
+    new_phase = Phase(
         parent_project=project,
-        days_need=days_need
+        parent_stage=project.current_stage(),
+        deadline_date = deadline
     )
-    db.session.add(first_phase)
+    db.session.add(new_phase)
+    # create a new delay counter
+    addDelayCounter(project.id, deadline)
+    db.session.commit()
 
 
 def wx_message(notice):
