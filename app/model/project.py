@@ -304,7 +304,6 @@ class Project(db.Model):
     def postpone(self, days):
         """postpone this stage."""
         # current phase update
-        self.current_stage().days_need += days
         
         deadline = self.current_phase().start_date + \
             timedelta(days=self.current_stage().days_need)
