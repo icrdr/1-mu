@@ -273,7 +273,7 @@ class Project(db.Model):
             self.current_phase().pauses.append(new_pause)
             # stop the delay counter
             removeDelayCounter(self.id)
-            db.session.commit()
+        db.session.commit()
         return self
 
     def resume(self):
