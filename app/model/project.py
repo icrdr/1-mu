@@ -262,42 +262,46 @@ class Project(db.Model):
         """Discard this project."""
         # current phase update
         self.status = 'discard'
-        new_pause = PhasePause(
-            pause_date=datetime.utcnow()
-        )
-        db.session.add(new_pause)
-        self.current_phase().pauses.append(new_pause)
-        # stop the delay counter
-        removeDelayCounter(self.id)
-        db.session.commit()
+        if self.current_phase():
+            new_pause = PhasePause(
+                pause_date=datetime.utcnow()
+            )
+            db.session.add(new_pause)
+            self.current_phase().pauses.append(new_pause)
+            # stop the delay counter
+            removeDelayCounter(self.id)
+            db.session.commit()
         return self
 
     def resume(self):
         """Resume this project."""
         # current phase update
-        if self.current_phase().feedback_date:
-            self.status = 'finish'
-            nextStageStart(self)
-        elif self.current_phase().upload_date:
-            self.status = 'pending'
-        elif self.current_phase().start_date:
-            if len(self.current_stage().phases) > 1:
-                self.status = 'modify'
-            else:
-                self.status = 'progress'
+        if self.current_phase():
+            if self.current_phase().feedback_date:
+                self.status = 'finish'
+                nextStageStart(self)
+            elif self.current_phase().upload_date:
+                self.status = 'pending'
+            elif self.current_phase().start_date:
+                if len(self.current_stage().phases) > 1:
+                    self.status = 'modify'
+                else:
+                    self.status = 'progress'
 
-            # create a new delay counter
-            offset = self.current_phase().start_date - \
-                self.current_phase().pauses[-1].pause_date
-            if timedelta(days=self.current_stage().days_need) > self.current_phase().pauses[-1].pause_date - self.current_phase().start_date:
-                deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need) + offset
-                self.current_phase().deadline_date = deadline
-                addDelayCounter(self.id, deadline)
+                # create a new delay counter
+                offset = self.current_phase().start_date - \
+                    self.current_phase().pauses[-1].pause_date
+                if timedelta(days=self.current_stage().days_need) > self.current_phase().pauses[-1].pause_date - self.current_phase().start_date:
+                    deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need) + offset
+                    self.current_phase().deadline_date = deadline
+                    addDelayCounter(self.id, deadline)
+                else:
+                    self.status = 'delay'
             else:
-                self.status = 'delay'
+                self.status = 'await'
+            self.current_phase().pauses[-1].resume_date = datetime.utcnow()
         else:
             self.status = 'await'
-        self.current_phase().pauses[-1].resume_date = datetime.utcnow()
         db.session.commit()
         return self
 
