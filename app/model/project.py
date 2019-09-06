@@ -105,7 +105,10 @@ class Project(db.Model):
 
     def current_phase(self):
         """Get current phase."""
-        return self.current_stage().phases[-1]
+        if self.current_stage().phases:
+            return self.current_stage().phases[-1]
+        else:
+            return False
 
     def start(self):
         """Start this project."""
