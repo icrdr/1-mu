@@ -133,7 +133,6 @@ class Project(db.Model):
         # create a new delay counter
         addDelayCounter(self.id, deadline)
         db.session.commit()
-        return self
 
     def editUpload(self, operator_id, creator_id, upload, upload_files):
         current_phase = self.current_phase()
@@ -164,6 +163,10 @@ class Project(db.Model):
         self.status = 'pending'
         self.delay = False
 
+        self.deadline_date = None
+        # stop the delay counter
+        removeDelayCounter(self.id)
+
         # logging
         new_log = ProjectLog(
             project=self,
@@ -173,11 +176,9 @@ class Project(db.Model):
             operator_user_id=operator_id
         )
         db.session.add(new_log)
-        self.deadline_date = None
-        # stop the delay counter
-        removeDelayCounter(self.id)
+
         db.session.commit()
-        return self
+        send_message(new_log, self.client)
 
     def editFeedback(self, operator_id, client_id, feedback_content):
         """Set the status to 'modify'."""
@@ -186,7 +187,6 @@ class Project(db.Model):
         current_phase.client_feedback = feedback_content
         current_phase.client_user_id = client_id
         db.session.commit()
-        return self
 
     def doFeedback(self, operator_id, client_id, feedback_content, is_pass):
         """Set the status to 'modify'."""
@@ -247,11 +247,11 @@ class Project(db.Model):
             project=self,
             phase=current_phase,
             log_type=('modify', 'pass')[is_pass],
-            content=feedback_content,
             operator_user_id=operator_id
         )
         db.session.add(new_log)
         db.session.commit()
+        send_message(new_log, self.creator)
 
     def doChangeStage(self, operator_id, progress_index):
         """change stage"""
@@ -532,7 +532,7 @@ class Phase(db.Model):
     stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
     stage = db.relationship('Stage', foreign_keys=stage_id, order_by="Phase.start_date", backref=db.backref(
         'phases', lazy=True))
-
+    
     creator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     creator = db.relationship('User', foreign_keys=creator_user_id, backref=db.backref(
         'phases_as_creator', lazy=True))
@@ -602,12 +602,29 @@ class ProjectLog(db.Model):
 
     content = db.Column(db.Text)
 
-    # remove it
-    read = db.Column(db.Boolean, nullable=False, default=False)
-
     operator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     operator = db.relationship('User', foreign_keys=operator_user_id, backref=db.backref(
-        'project_logs_as_operator', lazy=True))
+        'project_logs', lazy=True))
+
+    def __repr__(self):
+        return '<ProjectLog id %s>' % self.id
+
+class ProjectNotice(db.Model):
+    """ProjectNotice Model"""
+    __tablename__ = 'project_notices'
+    id = db.Column(db.Integer, primary_key=True)
+    sned_date = db.Column(db.DateTime, default=datetime.utcnow)
+    read_date = db.Column(db.DateTime)
+
+    log_id = db.Column(db.Integer, db.ForeignKey('project_logs.id'))
+    log = db.relationship('ProjectLog', foreign_keys=log_id, backref=db.backref(
+        'notices', lazy=True))
+
+    read = db.Column(db.Boolean, nullable=False, default=False)
+
+    to_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    to_user = db.relationship('User', foreign_keys=to_user_id, backref=db.backref(
+        'project_notices', lazy=True))
 
     def set_read(self):
         self.read = True
@@ -616,7 +633,7 @@ class ProjectLog(db.Model):
         return self
 
     def __repr__(self):
-        return '<ProjectLog id %s>' % self.id
+        return '<ProjectNotice id %s>' % self.id
 
 
 def delay(project_id):
@@ -625,7 +642,6 @@ def delay(project_id):
         project.delay = True
     db.session.commit()
     print('%d project delay!' % project_id)
-
 
 def addDelayCounter(project_id, deadline):
     scheduler.add_job(
@@ -639,89 +655,94 @@ def addDelayCounter(project_id, deadline):
     )
     print('%d project addCounter: %s' % (project_id, deadline))
 
-
 def removeDelayCounter(project_id):
     if scheduler.get_job('delay_project_'+str(project_id)):
         scheduler.remove_job('delay_project_'+str(project_id))
         print('%d project removeCounter' % project_id)
 
+def send_message(log, to_user):
+    new_notice = ProjectNotice(
+        log=log,
+        to_user=to_user
+    )
+    db.session.add(new_notice)
+    db.session.commit()
 
-def wx_message(notice):
     option = Option.query.filter_by(name='wechat_access_token').first()
     if not option:
         return False
-    if not notice.to_user.wx_user:
+    if not to_user.wx_user:
         return False
 
     url = "https://api.weixin.qq.com/cgi-bin/message/template/send"
     params = {
         "access_token": option.value,
     }
-    if notice.notice_type == 'upload':
+    if log.log_type == 'upload':
         data = {
-            "touser": notice.to_user.wx_user.openid,
+            "touser": to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-            "url": "http://beta.1-mu.net/projects/{}?stage_index={}&phase_index={}".format(notice.parent_project_id, getStageIndex(notice.parent_stage), getPhaseIndex(notice.parent_phase)),
+            "url": "http://beta.1-mu.net/projects/{}?&phase_id={}".format(log.project_id, log.phase_id),
             "data": {
                 "first": {
-                    "value": "企划名：{}-{}".format(notice.parent_project.title, notice.parent_stage.name),
+                    "value": "企划名：{}-{}".format(log.project.title, log.project.current_stage().name),
                 },
                 "keyword1": {
-                    "value": "{} 提交了阶段成品".format(notice.from_user.name),
+                    "value": "{} 提交了阶段成品".format(log.operator.name),
                     "color": "#8c8c8c"
                 },
                 "keyword2": {
-                    "value": UTC2Local(notice.send_date).strftime("%Y-%m-%d %H:%M:%S"),
+                    "value": UTC2Local(log.log_date).strftime("%Y-%m-%d %H:%M:%S"),
                     "color": "#8c8c8c"
                 },
                 "remark": {
-                    "value": "说明：{}".format(excerptHtml(notice.content, 40)),
+                    "value": "说明：{}".format(excerptHtml(log.content, 40)),
                     "color": "#8c8c8c"
                 }
             }
         }
-    elif notice.notice_type == 'modify':
+    elif log.log_type == 'modify':
         data = {
-            "touser": notice.to_user.wx_user.openid,
+            "touser": to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-            "url": "http://beta.1-mu.net/projects/{}?stage_index={}&phase_index={}".format(notice.parent_project_id, getStageIndex(notice.parent_stage), getPhaseIndex(notice.parent_phase)),
+            "url": "http://beta.1-mu.net/projects/{}?&phase_id={}".format(log.project_id, log.phase_id),
             "data": {
                 "first": {
-                    "value": "企划名：{}-{}".format(notice.parent_project.title, notice.parent_stage.name),
+                    "value": "企划名：{}-{}".format(log.project.title, log.project.current_stage().name),
                 },
                 "keyword1": {
-                    "value": "{} 提出了修改建议".format(notice.from_user.name),
+                    "value": "{} 提出了修改建议".format(log.operator.name),
                     "color": "#8c8c8c"
                 },
                 "keyword2": {
-                    "value": UTC2Local(notice.send_date).strftime("%Y-%m-%d %H:%M:%S"),
+                    "value": UTC2Local(log.log_date).strftime("%Y-%m-%d %H:%M:%S"),
                     "color": "#8c8c8c"
                 },
                 "remark": {
-                    "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content, 40)),
+                    "value": "{} 建议：{}".format(log.operator.name, excerptHtml(log.content, 40)),
                     "color": "#8c8c8c"
                 }
             }
         }
-    elif notice.notice_type == 'pass':
+    elif log.log_type == 'pass':
         data = {
-            "touser": notice.to_user.wx_user.openid,
+            "touser": to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-            "url": "http://beta.1-mu.net/projects/{}?stage_index={}&phase_index={}".format(notice.parent_project_id, getStageIndex(notice.parent_stage), getPhaseIndex(notice.parent_phase)),
+            "url": "http://beta.1-mu.net/projects/{}?&phase_id={}".format(log.project_id, log.phase_id),
             "data": {
                 "first": {
-                    "value": "企划名：{}-{}".format(notice.parent_project.title, notice.parent_stage.name),
+                    "value": "企划名：{}-{}".format(log.project.title, log.project.current_stage().name),
                 },
                 "keyword1": {
-                    "value": "{} 审核通过当前阶段".format(notice.from_user.name),
+                    "value": "{} 审核通过当前阶段".format(log.operator.name),
                     "color": "#8c8c8c"
                 },
                 "keyword2": {
-                    "value": UTC2Local(notice.send_date).strftime("%Y-%m-%d %H:%M:%S"),
+                    "value": UTC2Local(log.log_date).strftime("%Y-%m-%d %H:%M:%S"),
                     "color": "#8c8c8c"
                 },
                 "remark": {
-                    "value": "{} 建议：{}".format(notice.from_user.name, excerptHtml(notice.content, 40)),
+                    "value": "{} 建议：{}".format(log.operator.name, excerptHtml(log.content, 40)),
                     "color": "#8c8c8c"
                 }
             }
@@ -730,7 +751,7 @@ def wx_message(notice):
         res = requests.post(url, params=params, data=json.dumps(
             data, ensure_ascii=False).encode('utf-8'))
         data = res.json()
-        print('send wx message to {}'.format(notice.to_user.name))
+        print('Send wx message to {}.'.format(to_user.name))
 
     except Exception as e:
         print(e)
