@@ -126,6 +126,15 @@ def fixStage():
     db.session.commit()
 
 @app.cli.command()
+def fixbool2():
+    files = model.File.query.all()
+    for file in files:
+        if not file.public:
+            file.public = False
+
+    db.session.commit()
+
+@app.cli.command()
 def fixbool():
     projects = model.Project.query.all()
     for project in projects:
