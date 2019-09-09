@@ -74,10 +74,10 @@ class Project(db.Model):
         server_default=("await"))
 
     progress = db.Column(db.Integer, default=0)
-    public = db.Column(db.Boolean, server_default='f',default=False)
-    pause = db.Column(db.Boolean, server_default='f',default=False)
-    delay = db.Column(db.Boolean, server_default='f',default=False)
-    discard = db.Column(db.Boolean, server_default='f',default=False)
+    public = db.Column(db.Boolean, server_default='f', default=False)
+    pause = db.Column(db.Boolean, server_default='f', default=False)
+    delay = db.Column(db.Boolean, server_default='f', default=False)
+    discard = db.Column(db.Boolean, server_default='f', default=False)
 
     # remove it
     stages2 = db.relationship(
@@ -174,7 +174,7 @@ class Project(db.Model):
         # project update
         self.status = 'pending'
         self.delay = False
-        
+
         # logging
         new_log = ProjectLog(
             project=self,
@@ -272,7 +272,7 @@ class Project(db.Model):
             db.session.delete(current_phase)
         self.progress = progress_index
         self.finish_date = None
-        
+
         if progress_index == 0 or progress_index == -1:
             self.delay = False
             self.deadline_date = None
@@ -439,7 +439,7 @@ class Project(db.Model):
         logs = self.logs
         for log in logs:
             db.session.delete(log)
-        
+
         phases = self.phases
         for phase in phases:
             db.session.delete(phase)
@@ -577,7 +577,7 @@ class Phase(db.Model):
     # many-many: File.phases-Phase.files
     files = db.relationship('File', secondary=PHASE_FILE,
                             lazy='subquery', backref=db.backref('phases', lazy=True))
-    
+
     def __repr__(self):
         return '<Phase id %s>' % self.id
 
@@ -624,7 +624,7 @@ class ProjectLog(db.Model):
     content = db.Column(db.Text)
 
     # remove it
-    read = db.Column(db.Boolean,  server_default='f', default=False)
+    read = db.Column(db.Boolean, server_default='f', default=False)
 
     operator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     operator = db.relationship('User', foreign_keys=operator_user_id, backref=db.backref(
