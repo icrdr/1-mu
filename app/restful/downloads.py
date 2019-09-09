@@ -250,7 +250,6 @@ def transfer2Content(keys, project):
             content.append(project.client.name)
         elif key == 'creator':
             content.append(project.creator.name)
-    print(content)
     return content
 
 

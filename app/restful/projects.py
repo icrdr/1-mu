@@ -362,10 +362,9 @@ class PorjectApi(Resource):
                     project.files.append(file)
 
             db.session.commit()
-            print(project.creator_user_id)
             return project, 201
         except Exception as error:
-            print(error)
+            print('[Sever Error]: %s' % error)
             api.abort(500, '[Sever Error]: ' + str(error))
 
     @admin_required

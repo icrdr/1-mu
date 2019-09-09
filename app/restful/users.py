@@ -283,7 +283,6 @@ G_PROJECT_NOTICES = reqparse.RequestParser()\
 @N_USER.route('/<int:user_id>/project_notices')
 class UserProjectNoticesApi(Resource):
     def get(self, user_id):
-        print(user_id)
         args = G_PROJECT_NOTICES.parse_args()
         user = userCheck(user_id)
         query = ProjectNotice.query.filter_by(to_user_id=user_id)

@@ -32,7 +32,6 @@ class PostList(Resource):
             # post = Post.query.filter(Post.id.in_(args['post_id'])).all()
             post = Post.query.filter(Post.author.has(User.id.in_(args['post_id']))).all()
             if post:
-                print(post)
                 return post
             else:
                 api.abort(404, "user {} doesn't exist".format(args['post_id']))
