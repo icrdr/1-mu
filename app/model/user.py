@@ -139,7 +139,7 @@ class Role(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(64), unique=True)
     description = db.Column(db.String(512))
-    default = db.Column(db.Boolean, server_default='f', default=False)
+    default = db.Column(db.Boolean, nullable=False, default=False)
     permissions = db.Column(db.Integer)
     # one-many: role-Role.users
     users = db.relationship('User', backref=db.backref('role', lazy=True))
@@ -296,7 +296,7 @@ class Message(db.Model):
     read_date = db.Column(db.DateTime)
 
     content = db.Column(db.Text)
-    read = db.Column(db.Boolean, server_default='f', default=False)
+    read = db.Column(db.Boolean, nullable=False, default=False)
 
     from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     from_user = db.relationship('User', foreign_keys=from_user_id, backref=db.backref(

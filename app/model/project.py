@@ -74,10 +74,10 @@ class Project(db.Model):
         server_default=("await"))
 
     progress = db.Column(db.Integer, default=0)
-    public = db.Column(db.Boolean, server_default='f', default=False)
-    pause = db.Column(db.Boolean, server_default='f', default=False)
-    delay = db.Column(db.Boolean, server_default='f', default=False)
-    discard = db.Column(db.Boolean, server_default='f', default=False)
+    public = db.Column(db.Boolean, nullable=False, default=False)
+    pause = db.Column(db.Boolean, nullable=False, default=False)
+    delay = db.Column(db.Boolean, nullable=False, default=False)
+    discard = db.Column(db.Boolean, nullable=False, default=False)
 
     # remove it
     stages2 = db.relationship(
@@ -624,7 +624,7 @@ class ProjectLog(db.Model):
     content = db.Column(db.Text)
 
     # remove it
-    read = db.Column(db.Boolean, server_default='f', default=False)
+    read = db.Column(db.Boolean, nullable=False, default=False)
 
     operator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     operator = db.relationship('User', foreign_keys=operator_user_id, backref=db.backref(
