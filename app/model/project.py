@@ -227,6 +227,7 @@ class Project(db.Model):
                     deadline_date=deadline
                 )
                 db.session.add(new_phase)
+                self.deadline_date = deadline
                 # create a new delay counter
                 addDelayCounter(self.id, deadline)
             else:
@@ -248,6 +249,7 @@ class Project(db.Model):
                 deadline_date=deadline
             )
             db.session.add(new_phase)
+            self.deadline_date = deadline
             # create a new delay counter
             addDelayCounter(self.id, deadline)
 
@@ -276,12 +278,15 @@ class Project(db.Model):
         if progress_index == 0 or progress_index == -1:
             self.delay = False
             self.deadline_date = None
+            
             if progress_index == 0:
                 self.status = 'await'
                 self.start_date = None
             else:
                 self.status = 'finish'
                 self.finish_date = datetime.utcnow()
+            
+            removeDelayCounter(self.id)
         else:
             next_stage = self.stages[progress_index-1]
             deadline = datetime.utcnow() + timedelta(days=next_stage.days_planned)
@@ -291,6 +296,7 @@ class Project(db.Model):
                 deadline_date=deadline
             )
             db.session.add(new_phase)
+            self.deadline_date = deadline
             addDelayCounter(self.id, deadline)
 
             self.status = 'progress'
