@@ -67,27 +67,16 @@ class Project(db.Model):
         'projects_as_creator', lazy=True))
 
     # progress & status data
-    # remove it
-    current_stage_index = db.Column(db.Integer, default=0)
     status = db.Column(
         db.Enum('progress', 'modify', 'pending', 'await', 'finish'),
         server_default=("await"))
-
     progress = db.Column(db.Integer, default=0)
     public = db.Column(db.Boolean, nullable=False, default=False)
     pause = db.Column(db.Boolean, nullable=False, default=False)
     delay = db.Column(db.Boolean, nullable=False, default=False)
     discard = db.Column(db.Boolean, nullable=False, default=False)
-
-    # remove it
-    stages2 = db.relationship(
-        'Stage',  foreign_keys='Stage.parent_project_id', backref=db.backref('parent_project', lazy=True))
     stages = db.relationship(
         'Stage',  foreign_keys='Stage.project_id', backref=db.backref('project', lazy=True))
-
-    # remove it
-    phases2 = db.relationship(
-        'Phase', foreign_keys='Phase.parent_project_id', order_by="Phase.start_date", backref=db.backref('parent_project', lazy=True))
 
     # timestamp
     post_date = db.Column(db.DateTime, default=datetime.utcnow)
@@ -278,7 +267,7 @@ class Project(db.Model):
         if progress_index == 0 or progress_index == -1:
             self.delay = False
             self.deadline_date = None
-            
+
             if progress_index == 0:
                 self.status = 'await'
                 self.start_date = None
@@ -525,19 +514,8 @@ class Stage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     description = db.Column(db.String(512))
-
-    # remove it
-    parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
-
-    # remove it
-    days_need = db.Column(db.Integer)
     days_planned = db.Column(db.Integer)
-
-    # remove it
-    phases2 = db.relationship(
-        'Phase', foreign_keys='Phase.parent_stage_id', order_by="Phase.start_date", backref=db.backref('parent_stage', lazy=True))
-
     def __repr__(self):
         return '<Stage id %s>' % self.id
 
@@ -546,11 +524,6 @@ class Phase(db.Model):
     """Phase Model"""
     __tablename__ = 'phases'
     id = db.Column(db.Integer, primary_key=True)
-
-    # remove it
-    parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
-    # remove it
-    parent_stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
 
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
     project = db.relationship('Project', foreign_keys=project_id, order_by="Phase.start_date", backref=db.backref(

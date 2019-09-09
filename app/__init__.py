@@ -131,7 +131,10 @@ def fixbool2():
     for file in files:
         if not file.public:
             file.public = False
-
+    projects = model.Project.query.all()
+    for project in projects:
+        if not project.public:
+            project.public = False
     db.session.commit()
 
 @app.cli.command()

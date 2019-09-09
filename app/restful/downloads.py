@@ -158,12 +158,12 @@ def transfer2Header(keys):
             header.append('结束时间')
         elif key == 'deadline_date':
             header.append('死线日期')
-        elif key == 'current_stage':
-            header.append('目前阶段')
-        elif key == 'status':
-            header.append('状态')
         elif key == 'progress':
-            header.append('进度')
+            header.append('企划进度')
+        elif key == 'status':
+            header.append('阶段状态')
+        elif key == 'finish':
+            header.append('企划状态')
         elif key == 'client':
             header.append('审核者')
         elif key == 'creator':
@@ -198,47 +198,51 @@ def transfer2Content(keys, project):
             else:
                 content.append('未结束')
         elif key == 'deadline_date':
-            deadline_date = project.current_phase().deadline_date
-            if deadline_date:
+            if project.deadline_date:
                 content.append(
-                    UTC2Local(deadline_date).strftime("%Y-%m-%d %H:%M:%S"))
+                    UTC2Local(project.deadline_date).strftime("%Y-%m-%d %H:%M:%S"))
             else:
-                content.append('未开始')
-        elif key == 'current_stage':
-            content.append(project.current_stage().name)
-        elif key == 'status':
-            status = project.status
-            if status == 'draft':
-                _str = '草稿'
-            elif status == 'await':
+                content.append('未进行')
+        elif key == 'progress':
+            current_stage = project.current_stage()
+            if current_stage:
+                _str = project.current_stage().name
+            elif project.progress == 0:
                 _str = '未开始'
-            elif status == 'progress':
-                _str = '进行中'
-            elif status == 'delay':
-                _str = '逾期中'
-            elif status == 'pending':
-                _str = '待确认'
-            elif status == 'abnormal':
-                _str = '异常？'
-            elif status == 'modify':
-                _str = '修改中'
-            elif status == 'pause':
-                _str = '暂停'
-            elif status == 'finish':
+            elif project.progress == -1:
                 _str = '已完成'
-            elif status == 'discard':
-                _str = '已废弃'
             else:
                 _str = '未知'
             content.append(_str)
-        elif key == 'progress':
+        elif key == 'status':
+            status = project.status
+            if status == 'await':
+                _str = '未开始'
+            elif status == 'progress':
+                _str = '进行中'
+            elif status == 'pending':
+                _str = '待确认'
+            elif status == 'modify':
+                _str = '修改中'
+            elif status == 'finish':
+                _str = '已完成'
+            else:
+                _str = '未知'
+
+            if project.pause:
+                if project.delay:
+                     _str += '（暂停、逾期）'
+                else:
+                     _str += '（暂停）'
+            elif project.delay:
+                _str += '（逾期）'
+            content.append(_str)
+        elif key == 'finish':
             status = project.status
             if status == 'finish':
                 _str = '完成'
-            elif status == 'await' or status == 'draft':
+            elif status == 'await':
                 _str = '未开始'
-            elif status == 'abnormal' or status == 'discard':
-                _str = '未知'
             else:
                 _str = '制作中'
             content.append(_str)
