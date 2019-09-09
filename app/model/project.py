@@ -683,7 +683,7 @@ def send_message(log, to_user):
         data = {
             "touser": to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-            "url": "http://beta.1-mu.net/projects/{}?&phase_id={}".format(log.project_id, log.phase_id),
+            "url": "http://beta.1-mu.net/projects/{}?phase_id={}".format(log.project_id, log.phase_id),
             "data": {
                 "first": {
                     "value": "企划名：{}-{}".format(log.project.title, log.project.current_stage().name),
@@ -706,7 +706,7 @@ def send_message(log, to_user):
         data = {
             "touser": to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-            "url": "http://beta.1-mu.net/projects/{}?&phase_id={}".format(log.project_id, log.phase_id),
+            "url": "http://beta.1-mu.net/projects/{}?phase_id={}".format(log.project_id, log.phase_id),
             "data": {
                 "first": {
                     "value": "企划名：{}-{}".format(log.project.title, log.project.current_stage().name),
@@ -729,7 +729,7 @@ def send_message(log, to_user):
         data = {
             "touser": to_user.wx_user.openid,
             "template_id": "36lVWBBzRu_Fw5qFwLJzf-1ZTwdn850QUQ7Q653ulww",
-            "url": "http://beta.1-mu.net/projects/{}?&phase_id={}".format(log.project_id, log.phase_id),
+            "url": "http://beta.1-mu.net/projects/{}?phase_id={}".format(log.project_id, log.phase_id),
             "data": {
                 "first": {
                     "value": "企划名：{}-{}".format(log.project.title, log.project.current_stage().name),
