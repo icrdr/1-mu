@@ -73,7 +73,7 @@ def fixProject():
     projcets = model.Project.query.filter(model.Project.pause==True).filter(model.Project.discard==False).all()
     for projcet in projcets:
         print(projcet)
-        projcet.doPause()
+        projcet.doPause(1)
         # projcet.doChangeDDL(1,datetime(2019, 9, 20, 0, 0, 0))
         db.session.commit()
         
