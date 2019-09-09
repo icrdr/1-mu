@@ -70,7 +70,7 @@ def dropProject():
 
 @app.cli.command()
 def fixProject():
-    projcets = model.Project.query.filter(model.Project.delay==True).all()
+    projcets = model.Project.query.filter(model.Project.delay==True).filter(model.Project.discard==False).all()
     for projcet in projcets:
         print(projcet)
         projcet.delay=False
