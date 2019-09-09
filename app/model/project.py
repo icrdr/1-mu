@@ -247,6 +247,7 @@ class Project(db.Model):
             project=self,
             phase=current_phase,
             log_type=('modify', 'pass')[is_pass],
+            content=feedback_content,
             operator_user_id=operator_id
         )
         db.session.add(new_log)
