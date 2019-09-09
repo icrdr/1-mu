@@ -658,12 +658,12 @@ class DashboardApi(Resource):
             .filter(and_(Project.finish_date <= end, Project.finish_date >= start))\
             .filter(Phase.creator_user_id == user_id).all()
 
-        stages = Stage.query.join(Stage.phases).join(Stage.parent_project)\
+        stages = Stage.query.join(Stage.phases).join(Stage.project)\
             .filter(Project.status == 'finish')\
             .filter(and_(Project.finish_date <= end, Project.finish_date >= start))\
             .filter(Phase.creator_user_id == user_id).all()
 
-        phases = Phase.query.join(Phase.parent_project)\
+        phases = Phase.query.join(Phase.project)\
             .filter(Project.status == 'finish')\
             .filter(and_(Project.finish_date <= end, Project.finish_date >= start))\
             .filter(Phase.creator_user_id == user_id).all()

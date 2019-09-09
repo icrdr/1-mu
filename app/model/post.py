@@ -64,7 +64,7 @@ class Post(db.Model):
     excerpt = db.Column(db.String(512))
     # one-many: Comment.parent_post-Post.comments
     comments = db.relationship(
-        'Comment', backref=db.backref('parent_post', lazy=True))
+        'Comment', backref=db.backref('post', lazy=True))
     # many-many: Tag.posts-Post.tags
     tags = db.relationship('Tag', secondary=post_tag,
                            lazy='subquery', backref=db.backref('posts', lazy=True))
@@ -86,7 +86,7 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text)
     # one-many: Comment.parent_post-Post.comments
-    parent_post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
     # one-many: Comment.author-User.comments
     author_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     # mnay-many in same table: Comment.parent_comment-Comment.children_comments
