@@ -70,21 +70,11 @@ def dropProject():
 
 @app.cli.command()
 def fixProject():
-    phases = model.Phase.query.all()
-    for phase in phases:
-        print(phase.id)
-        if not phase.parent_project_id:
-            phase.parent_project_id = phase.parent_stage.parent_project_id
-        stage = phase.parent_stage
-        if stage.start_date:
-            if stage.phases.index(phase) == 0:
-                phase_start_date = stage.start_date
-            else:
-                index = stage.phases.index(phase) - 1
-                phase_start_date = stage.phases[index].feedback_date
-            phase.start_date = phase_start_date
-            phase.deadline_date = phase_start_date + timedelta(days=phase.days_need)
-
+    projcets = model.Project.query.filter(model.Project.delay==True).all()
+    for projcet in projcets:
+        print(projcet)
+        projcet.delay=False
+        projcet.doChangeDDL(1,datetime(2019, 9, 20, 0, 0, 0))
         db.session.commit()
         
 @app.cli.command()
