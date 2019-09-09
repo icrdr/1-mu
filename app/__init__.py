@@ -74,6 +74,7 @@ def fixProject():
     for projcet in projcets:
         print(projcet)
         projcet.delay=False
+        projcet.pause=True
         projcet.doChangeDDL(1,datetime(2019, 9, 20, 0, 0, 0))
         db.session.commit()
         
