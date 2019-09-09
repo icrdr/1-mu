@@ -67,15 +67,6 @@ def init():
 def dropProject():
     model.Project.delete_all_project()
 
-
-@app.cli.command()
-def fixProject():
-    projcets = model.Project.query.filter(model.Project.pause==True).filter(model.Project.discard==False).all()
-    for projcet in projcets:
-        print(projcet)
-        projcet.doPause(1)
-        # projcet.doChangeDDL(1,datetime(2019, 9, 20, 0, 0, 0))
-        db.session.commit()
         
 @app.cli.command()
 def fixCreator():
