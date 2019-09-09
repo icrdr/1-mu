@@ -90,7 +90,7 @@ PROJECT_TABLE = reqparse.RequestParser()\
     .add_argument('project_id', location='args', required=True, action='split')\
     .add_argument('keys', location='args', required=True, action='split')\
     .add_argument('order', location='args', default='asc', choices=['asc', 'desc'])\
-    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date', 'finish_date', 'status', 'creator_id', 'client_id', 'current_stage_index'])
+    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date', 'finish_date', 'status', 'creator_id', 'client_id', 'progress'])
 
 
 @N_DOWNLOAD.route('/projects/csv')
@@ -312,16 +312,9 @@ def downloadZipTask(self, project_id, mode):
     zipf = zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED)
 
     for i, project in enumerate(project_list):
-        phase = project.current_phase()
-        stage = project.current_stage()
-        if phase.upload_date:
-            last_upload_phase = stage.phases[-1]
-        elif len(stage.phases) > 1:
-            last_upload_phase = stage.phases[-2]
-        elif project.current_stage_index > 0:
-            last_upload_phase = project.stages[project.current_stage_index-1].phases[-1]
-        else:
-            last_upload_phase = None
+        for phase in project.phases:
+            if phase.upload_files:
+                last_upload_phase = phase
 
         if last_upload_phase:
             foldername = project.title

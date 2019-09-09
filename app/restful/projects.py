@@ -72,7 +72,7 @@ M_PHASE = api.model('phase', {
 M_STAGE = api.model('stage', {
     'id': fields.Integer,
     'name': fields.String,
-    'days_need': fields.Integer,
+    'days_planned': fields.Integer,
     'phases': fields.List(fields.Nested(M_PHASE))
 })
 M_GROUP = api.model('group', {
@@ -92,9 +92,12 @@ M_PROJECT = api.model('project', {
     'public_date': fields.String,
     'start_date': fields.String,
     'finish_date': fields.String,
-    'current_stage_index': fields.Integer,
+    'deadline_date': fields.String,
+    'progress': fields.Integer,
     'stages': fields.List(fields.Nested(M_STAGE)),
     'tags': fields.List(fields.Nested(M_TAG)),
+    'delay': fields.Boolean,
+    'pause': fields.Boolean,
 })
 M_PROJECTS = api.model('projects', {
     'projects': fields.List(fields.Nested(M_PROJECT)),
@@ -108,28 +111,27 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('title', location='args')\
     .add_argument('search', location='args')\
     .add_argument('tags', location='args')\
+    .add_argument('discard', location='args', type=int, default=0)\
     .add_argument('start_date', location='args', action='split')\
     .add_argument('finish_date', location='args', action='split')\
-    .add_argument('current_stage_index', location='args', action='split')\
+    .add_argument('deadline_date', location='args', action='split')\
+    .add_argument('progress', location='args', action='split')\
     .add_argument('status', location='args', action='split')\
     .add_argument('include', location='args', action='split')\
     .add_argument('exclude', location='args', action='split')\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=10)\
     .add_argument('order', location='args', default='asc', choices=['asc', 'desc'])\
-    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date', 'finish_date', 'status', 'creator_id', 'client_id', 'current_stage_index'])
+    .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date', 'finish_date', 'deadline_date', 'status', 'creator_id', 'client_id', 'progress'])
 
 POST_PROJECT = reqparse.RequestParser()\
     .add_argument('title', required=True)\
-    .add_argument('group_id', type=int)\
     .add_argument('creator_id', type=int, required=True)\
     .add_argument('client_id', type=int, required=True)\
     .add_argument('design', required=True)\
     .add_argument('stages', type=list, location='json', required=True)\
-    .add_argument('confirm', type=int, default=0)\
     .add_argument('tags', action='append')\
     .add_argument('files', type=int, action='append')
-
 
 @N_PROJECT.route('')
 class PorjectsApi(Resource):
@@ -137,6 +139,11 @@ class PorjectsApi(Resource):
     def get(self):
         args = GET_PROJECT.parse_args()
         query = Project.query
+        if args['discard']:
+            query = query.filter(Project.discard==True)
+        else:
+            query = query.filter(Project.discard==False)
+
         if args['creator_id']:
             query = query.filter(
                 Project.creator_user_id.in_(args['creator_id']))
@@ -152,6 +159,10 @@ class PorjectsApi(Resource):
             query = query.filter(Project.title.contains(args['title']))
 
         if args['status']:
+            if 'pause' in args['status']:
+                query = query.filter(Project.pause==True)
+            if 'delay' in args['status']:
+                query = query.filter(Project.delay==True)
             query = query.filter(Project.status.in_(args['status']))
 
         if args['start_date']:
@@ -170,10 +181,18 @@ class PorjectsApi(Resource):
 
             query = query.filter(
                 and_(Project.finish_date <= end, Project.finish_date >= start))
+        if args['deadline_date']:
+            start = datetime.strptime(
+                args['deadline_date'][0], '%Y-%m-%d %H:%M:%S')
+            end = datetime.strptime(
+                args['deadline_date'][1], '%Y-%m-%d %H:%M:%S')
 
-        if args['current_stage_index']:
-            query = query.filter(Project.current_stage_index.in_(
-                args['current_stage_index']))
+            query = query.filter(
+                and_(Project.deadline_date <= end, Project.deadline_date >= start))
+
+        if args['progress']:
+            query = query.filter(Project.progress.in_(
+                args['progress']))
 
         if args['search']:
             query = query.join(Project.tags).filter(
@@ -214,36 +233,41 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.finish_date.asc())
             else:
                 query = query.order_by(Project.finish_date.desc())
+        elif args['order_by'] == 'deadline_date':
+            if args['order'] == 'asc':
+                query = query.order_by(Project.deadline_date.asc())
+            else:
+                query = query.order_by(Project.deadline_date.desc())
         elif args['order_by'] == 'status':
             if args['order'] == 'asc':
-                query = query.order_by(Project.status.asc(), Project.id.desc())
+                query = query.order_by(Project.status.asc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
             else:
                 query = query.order_by(
-                    Project.status.desc(), Project.id.desc())
+                    Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
 
-        elif args['order_by'] == 'current_stage_index':
+        elif args['order_by'] == 'progress':
             if args['order'] == 'asc':
-                query = query.order_by(Project.current_stage_index.asc(
+                query = query.order_by(Project.progress.asc(
                 ), Project.status.desc(), Project.id.desc())
             else:
-                query = query.order_by(Project.current_stage_index.desc(
+                query = query.order_by(Project.progress.desc(
                 ), Project.status.desc(), Project.id.desc())
 
         elif args['order_by'] == 'creator_id':
             if args['order'] == 'asc':
                 query = query.join(Project.creator).order_by(
-                    User.id.asc(), Project.status.desc(), Project.id.desc())
+                    User.id.asc(), Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
             else:
                 query = query.join(Project.creator).order_by(
-                    User.id.desc(), Project.status.desc(), Project.id.desc())
+                    User.id.desc(), Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
 
         elif args['order_by'] == 'client_id':
             if args['order'] == 'asc':
                 query = query.join(Project.client).order_by(
-                    User.id.asc(), Project.status.desc(), Project.id.desc())
+                    User.id.asc(), Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
             else:
                 query = query.join(Project.client).order_by(
-                    User.id.desc(), Project.status.desc(), Project.id.desc())
+                    User.id.desc(), Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
 
         total = len(query.all())
         projects = query.limit(args['pre_page']).offset(
@@ -271,19 +295,19 @@ class PorjectsApi(Resource):
 
         try:
             new_project = Project.create_project(
-                title=args['title'],
-                client_id=args['client_id'],
-                creator_id=args['creator_id'],
-                design=args['design'],
-                stages=args['stages'],
-                tags=args['tags'],
-                files=args['files'],
-                confirm=args['confirm'],
+                g.current_user.id,
+                args['title'],
+                args['client_id'],
+                args['creator_id'],
+                args['design'],
+                args['stages'],
+                args['tags'],
+                args['files'],
             )
             return new_project, 201
         except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
 
 
 UPDATE_PROJECT = reqparse.RequestParser()\
@@ -347,7 +371,7 @@ class PorjectApi(Resource):
     @admin_required
     def delete(self, project_id):
         project = projectCheck(project_id)
-        project.delete()
+        project.doDelete()
         return {'message': 'ok'}, 204
 
 
@@ -361,15 +385,20 @@ class PorjectStartApi(Resource):
             if g.current_user.id != project.client_user_id:
                 api.abort(
                     403, "Only the project's client can start(Administrator privileges required).")
-        if project.status != 'await':
+
+        if project.progress != 0:
             api.abort(401, "Project is already started.")
+        if project.discard:
+            api.abort(401, "Project is discard.")
+        if project.pause:
+            api.abort(401, "Project is paused.")
 
         try:
-            project.start()
+            project.doStart(g.current_user.id)
             return project, 201
         except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
 
 
 UPLOAD_PROJECT = reqparse.RequestParser()\
@@ -385,110 +414,118 @@ class PorjectUploadApi(Resource):
     def put(self, project_id):
         args = UPLOAD_PROJECT.parse_args()
         project = Project.query.get(project_id)
-        for upload_file in args['upload_files']:
-            if not File.query.get(upload_file['id']):
-                api.abort(401, "File is not exist.")
-        if project.status != 'modify' and project.status != 'progress' and project.status != 'delay':
-            api.abort(
-                401, "Creator can upload only during 'modify' or 'progress'.")
         if not g.current_user.can(PERMISSIONS['EDIT']):
             if g.current_user.id != project.creator_user_id:
                 api.abort(
                     403, "Only the project's creator can upload(Administrator privileges required).")
+
+        for upload_file in args['upload_files']:
+            if not File.query.get(upload_file['id']):
+                api.abort(401, "File is not exist.")
+        if project.status != 'modify' and project.status != 'progress':
+            api.abort(
+                401, "Creator can upload only during 'modify' or 'progress'.")
+        if project.discard:
+            api.abort(401, "Project is discard.")
+        if project.pause:
+            api.abort(401, "Project is paused.")
+
         try:
-            project.upload(
-                g.current_user.id,
-                args['upload'],
-                args['upload_files'],
-                args['confirm']
-            )
+            if args['confirm']:
+                project.doUpload(
+                    g.current_user.id,
+                    g.current_user.id,
+                    args['upload'],
+                    args['upload_files'],
+                )
+            else:
+                project.editUpload(
+                    g.current_user.id,
+                    g.current_user.id,
+                    args['upload'],
+                    args['upload_files'],
+                )
             return project, 201
         except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
 
 
 MODIFY_PROJECT = reqparse.RequestParser()\
     .add_argument('feedback', required=True)\
+    .add_argument('is_pass', type=int, default=0)\
     .add_argument('confirm', type=int, default=0)
 
 
-@N_PROJECT.route('/<int:project_id>/modify')
+@N_PROJECT.route('/<int:project_id>/feedback')
 class PorjectModifyApi(Resource):
     @api.marshal_with(M_PROJECT)
     @permission_required()
     def put(self, project_id):
         args = MODIFY_PROJECT.parse_args()
         project = Project.query.get(project_id)
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            if g.current_user.id != project.client_user_id:
+                api.abort(
+                    403, "Only the project's client can feedback(Administrator privileges required).")
+
         if project.status != 'pending':
             api.abort(
                 401, "Project can be set to 'modify' only after creator's upload.")
+        if project.discard:
+            api.abort(401, "Project is discard.")
+        if project.pause:
+            api.abort(401, "Project is paused.")
+
+        try:
+            if args['confirm']:
+                project.doFeedback(
+                    g.current_user.id,
+                    g.current_user.id,
+                    args['feedback'],
+                    args['is_pass']
+                )
+            else:
+                project.editFeedback(
+                    g.current_user.id,
+                    g.current_user.id,
+                    args['feedback'],
+                )
+            return project, 201
+        except Exception as error:
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
+
+
+CHANGEDDL_PROJECT = reqparse.RequestParser()\
+    .add_argument('ddl', required=True)
+
+
+@N_PROJECT.route('/<int:project_id>/change_ddl')
+class PorjectChangeDDLApi(Resource):
+    @api.marshal_with(M_PROJECT)
+    @permission_required()
+    def put(self, project_id):
+        args = CHANGEDDL_PROJECT.parse_args()
+        project = Project.query.get(project_id)
         if not g.current_user.can(PERMISSIONS['EDIT']):
             if g.current_user.id != project.client_user_id:
                 api.abort(
                     403, "Only the project's client can feedback(Administrator privileges required).")
 
-        try:
-            project.modify(g.current_user.id,
-                           args['feedback'], args['confirm'])
-            return project, 201
-        except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
-
-
-POSTPONE_PROJECT = reqparse.RequestParser()\
-    .add_argument('days', type=int, required=True)
-
-
-@N_PROJECT.route('/<int:project_id>/postpone')
-class PorjectPostponeApi(Resource):
-    @api.marshal_with(M_PROJECT)
-    @permission_required()
-    def put(self, project_id):
-        args = POSTPONE_PROJECT.parse_args()
-        project = Project.query.get(project_id)
-        if project.status != 'modify' and project.status != 'progress' and project.status != 'delay':
+        if project.status != 'modify' and project.status != 'progress':
             api.abort(
                 401, "Creator can upload only during 'modify' or 'progress'.")
-        if not g.current_user.can(PERMISSIONS['EDIT']):
-            if g.current_user.id != project.client_user_id:
-                api.abort(
-                    403, "Only the project's client can feedback(Administrator privileges required).")
+        if project.progress <= 0:
+            api.abort(401, "Project is not in progress.")
 
+        ddl = datetime.strptime(args['ddl'], '%Y-%m-%d %H:%M:%S')
         try:
-            project.postpone(args['days'])
+            project.doChangeDDL(g.current_user.id, ddl)
             return project, 201
         except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
-
-
-FINISH_PROJECT = reqparse.RequestParser()\
-    .add_argument('feedback', default='没有建议')\
-
-
-
-@N_PROJECT.route('/<int:project_id>/finish')
-class PorjectFinishApi(Resource):
-    @api.marshal_with(M_PROJECT)
-    @permission_required()
-    def put(self, project_id):
-        args = FINISH_PROJECT.parse_args()
-        project = Project.query.get(project_id)
-        if project.status != 'pending':
-            api.abort(
-                401, "Project can be set to 'finish' only after creator's upload.")
-        if not g.current_user.can(PERMISSIONS['EDIT']):
-            if g.current_user.id != project.client_user_id:
-                api.abort(
-                    403, "Only the project's client can feedback(Administrator privileges required).")
-        try:
-            project.finish(g.current_user.id, args['feedback'])
-            return project, 201
-        except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
 
 
 @N_PROJECT.route('/<int:project_id>/discard')
@@ -501,11 +538,28 @@ class PorjectDiscardApi(Resource):
             api.abort(
                 403, "Administrator privileges required for request update action.")
         try:
-            project.discard()
+            project.doDiscard(g.current_user.id)
             return project, 201
         except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
+
+
+@N_PROJECT.route('/<int:project_id>/recover')
+class PorjectRecoverApi(Resource):
+    @api.marshal_with(M_PROJECT)
+    @permission_required()
+    def put(self, project_id):
+        project = Project.query.get(project_id)
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            api.abort(
+                403, "Administrator privileges required for request update action.")
+        try:
+            project.doRecover(g.current_user.id)
+            return project, 201
+        except Exception as error:
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
 
 
 @N_PROJECT.route('/<int:project_id>/resume')
@@ -517,29 +571,17 @@ class PorjectResumeApi(Resource):
         if not g.current_user.can(PERMISSIONS['EDIT']):
             api.abort(
                 403, "Administrator privileges required for request update action.")
+        if project.discard:
+            api.abort(401, "Project is discard.")
+        if project.progress <= 0:
+            api.abort(401, "Project is not in progress.")
+
         try:
-            project.resume()
+            project.doResume(g.current_user.id)
             return project, 201
         except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
-
-
-@N_PROJECT.route('/<int:project_id>/abnormal')
-class PorjectAbnormalApi(Resource):
-    @api.marshal_with(M_PROJECT)
-    @permission_required()
-    def put(self, project_id):
-        project = Project.query.get(project_id)
-        if not g.current_user.can(PERMISSIONS['EDIT']):
-            api.abort(
-                403, "Administrator privileges required for request update action.")
-        try:
-            project.abnormal()
-            return project, 201
-        except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
 
 
 @N_PROJECT.route('/<int:project_id>/pause')
@@ -551,16 +593,21 @@ class PorjectPauseApi(Resource):
         if not g.current_user.can(PERMISSIONS['EDIT']):
             api.abort(
                 403, "Administrator privileges required for request update action.")
+        if project.discard:
+            api.abort(401, "Project is discard.")
+        if project.progress <= 0:
+            api.abort(401, "Project is not in progress.")
+
         try:
-            project.pause()
+            project.doPause(g.current_user.id)
             return project, 201
         except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
 
 
 @N_PROJECT.route('/<int:project_id>/back')
-class PorjectgoBackApi(Resource):
+class PorjectChangeStageApi(Resource):
     @api.marshal_with(M_PROJECT)
     @permission_required()
     def put(self, project_id):
@@ -568,18 +615,32 @@ class PorjectgoBackApi(Resource):
         if not g.current_user.can(PERMISSIONS['EDIT']):
             api.abort(
                 403, "Administrator privileges required for request update action.")
+
+        if project.discard:
+            api.abort(401, "Project is discard.")
+        if project.pause:
+            api.abort(401, "Project is paused.")
+        if project.progress==0:
+            api.abort(401, "Project can't go back any more")
+
+        if project.progress == -1:
+            progress_index = len(project.stages)
+        else:
+            progress_index = project.progress-1
         try:
-            project.goBack()
+            project.doChangeStage(g.current_user.id, progress_index)
             return project, 201
         except Exception as error:
-            print(error)
-            api.abort(500, '[Sever Error]: ' + str(error))
+            print('[Sever Error]: %s' % error)
+            api.abort(500, '[Sever Error]: %s' % error)
 
 
 N_DASH = api.namespace('api/dashboard', description='projects operations')
 
 GET_DASH = reqparse.RequestParser()\
     .add_argument('finish_date', required=True, location='args', action='split')\
+
+
 
 @N_DASH.route('/<int:user_id>')
 class DashboardApi(Resource):

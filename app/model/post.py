@@ -51,9 +51,9 @@ class Post(db.Model):
     author_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     # one-many: Post.category-Category.posts
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'))
-    show_comment = db.Column(db.Boolean, default=True)
-    allow_comment = db.Column(db.Boolean, default=True)
-    anonymity = db.Column(db.Boolean, default=False)
+    show_comment = db.Column(db.Boolean, server_default='t', default=True)
+    allow_comment = db.Column(db.Boolean, server_default='t', default=True)
+    anonymity = db.Column(db.Boolean, server_default='f', default=False)
     status = db.Column(db.Enum('publish', 'draft', 'discard'),
                        server_default=("draft"))
     post_date = db.Column(db.DateTime, default=datetime.utcnow)

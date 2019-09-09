@@ -29,7 +29,7 @@ class File(db.Model):
     previews = db.relationship(
         'Preview', backref=db.backref('file', lazy=True))
     description = db.Column(db.String(512))
-    public = db.Column(db.Boolean, default=False)
+    public = db.Column(db.Boolean, server_default='f', default=False)
     tags = db.relationship(
         'Tag', secondary=FILE_TAG,
         lazy='subquery', backref=db.backref('files', lazy=True))

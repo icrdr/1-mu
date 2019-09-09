@@ -102,37 +102,70 @@ def fixCreator():
 
 @app.cli.command()
 def fixStage():
-    stages = model.Stage.query.all()
-    for stage in stages:
-        print(stage)
-        if stage.phases:
-            stage.days_need = stage.phases[0].days_need
-        else:
-            stage.days_need = 7
-
     phases = model.Phase.query.all()
     for phase in phases:
-        print(phases)
-        if not phase.start_date:
-            db.session.delete(phase)
-        if not phase.parent_stage_id:
-            phase.parent_project.stages[-1].phases.append(phase)
+        phase.project_id = phase.parent_project_id
+        phase.stage_id = phase.parent_stage_id
 
+    stages = model.Stage.query.all()
+    for stage in stages:
+        stage.project_id = stage.parent_project_id
+        stage.days_planned = stage.days_need
+    
+    projects = model.Project.query.all()
+    for project in projects:
+        if project.status =='await':
+            project.progress = 0
+            project.start_date == None
+            project.finish_date == None
+        elif project.status =='finish':
+            project.progress = -1
+        else:
+            project.finish_date == None
+            project.progress = project.current_stage_index+1
     db.session.commit()
 
 @app.cli.command()
-def fixDiscard():
+def fixbool():
     projects = model.Project.query.all()
     for project in projects:
-        if project.status == 'discard' or project.status == 'pause' or project.status == 'abnormal':
-            print(project)
-            if len(project.current_phase().pauses)==0:
-                new_pause = model.PhasePause(
-                    pause_date = datetime.utcnow()
-                )
-                db.session.add(new_pause)
-                project.current_phase().pauses.append(new_pause)
-            db.session.commit()
+        if project.status == 'pause' or project.status == 'discard':
+            if project.current_phase():
+                if project.current_phase().feedback_date:
+                    project.status = 'finish'
+                elif project.current_phase().upload_date:
+                    project.status = 'pending'
+                elif project.current_phase().start_date:
+                    if len(project.current_stage().phases) > 1:
+                        project.status = 'modify'
+                    else:
+                        project.status = 'progress'
+                else:
+                    project.status = 'await'
+            else:
+                project.status = 'await'
+                
+            if project.status == 'pause':
+                project.pause = True
+
+            if project.status == 'discard':
+                project.discard = True
+        else:
+            project.discard = False
+            project.pause = False
+
+        if project.status == 'delay':
+            if len(project.current_stage().phases) > 1:
+                project.status = 'modify'
+            else:
+                project.status = 'progress'
+            project.delay = True
+        else:
+            project.delay = False
+        current_phase = project.current_phase()
+        if current_phase:
+            project.deadline_date = current_phase.deadline_date
+        db.session.commit()
 
 @app.cli.command()
 def fixTX():

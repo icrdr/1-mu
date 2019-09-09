@@ -3,7 +3,7 @@ Project Stage Phase Propose
 """
 
 from datetime import datetime, timedelta
-from .. import db, scheduler
+from .. import db, scheduler, app
 from .user import User, Group
 from .misc import Option
 from .file import File
@@ -46,11 +46,18 @@ PHASE_UPLOAD_FILE = db.Table(
 class Project(db.Model):
     """Project Model"""
     __tablename__ = 'projects'
+    # meta data
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(256))
     design = db.Column(db.Text)
     remark = db.Column(db.Text)
-    # one-many: Post.client-User.projects_as_client
+    files = db.relationship('File', secondary=PROJECT_FILE,
+                            lazy='subquery', backref=db.backref('projects', lazy=True))
+    tags = db.relationship(
+        'Tag', secondary=PROJECT_TAG,
+        lazy='subquery', backref=db.backref('projects', lazy=True))
+
+    # user data
     client_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     client = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
         'projects_as_client', lazy=True))
@@ -59,313 +66,388 @@ class Project(db.Model):
     creator = db.relationship('User', foreign_keys=creator_user_id, backref=db.backref(
         'projects_as_creator', lazy=True))
 
-    # many-many: User.projects-Project.creators
-    creator_group_id = db.Column(db.Integer, db.ForeignKey('groups.id'))
-    creator_group = db.relationship('Group', foreign_keys=creator_group_id, backref=db.backref(
-        'projects', lazy=True))
-    # many-many: User.projects-Project.creators
-    tags = db.relationship(
-        'Tag', secondary=PROJECT_TAG,
-        lazy='subquery', backref=db.backref('projects', lazy=True))
-
+    # progress & status data
+    # remove it
+    current_stage_index = db.Column(db.Integer, default=0)
     status = db.Column(
-        db.Enum('draft', 'await', 'progress', 'delay', 'pending',
-                'abnormal', 'modify', 'pause', 'finish', 'discard'),
-        server_default=("draft"))
-    post_date = db.Column(db.DateTime, default=datetime.utcnow)
-    start_date = db.Column(db.DateTime)
-    finish_date = db.Column(db.DateTime)
+        db.Enum('progress', 'modify', 'pending', 'await', 'finish'),
+        server_default=("await"))
+
+    progress = db.Column(db.Integer, default=0)
+    public = db.Column(db.Boolean, server_default='f',default=False)
+    pause = db.Column(db.Boolean, server_default='f',default=False)
+    delay = db.Column(db.Boolean, server_default='f',default=False)
+    discard = db.Column(db.Boolean, server_default='f',default=False)
 
     # remove it
-    last_pause_date = db.Column(db.DateTime)
-
-    # one-many: project.client-User.projects_as_client
-    client = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
-        'projects_as_client', lazy=True))
-    # many-many: File.phases-Phase.files
-    files = db.relationship('File', secondary=PROJECT_FILE,
-                            lazy='subquery', backref=db.backref('projects', lazy=True))
-    # one-many: Comment.parent_post-Post.comments
+    stages2 = db.relationship(
+        'Stage',  foreign_keys='Stage.parent_project_id', backref=db.backref('parent_project', lazy=True))
     stages = db.relationship(
-        'Stage', backref=db.backref('parent_project', lazy=True))
-    phases = db.relationship(
-        'Phase', order_by="Phase.start_date", backref=db.backref('parent_project', lazy=True))
-    current_stage_index = db.Column(db.Integer, default=0)
+        'Stage',  foreign_keys='Stage.project_id', backref=db.backref('project', lazy=True))
 
-    # one-many: Propose.parent_project-Project.Proposes
-    proposes = db.relationship(
-        'Propose', backref=db.backref('parent_project', lazy=True))
+    # remove it
+    phases2 = db.relationship(
+        'Phase', foreign_keys='Phase.parent_project_id', order_by="Phase.start_date", backref=db.backref('parent_project', lazy=True))
 
-    notices = db.relationship(
-        'ProjectNotice', backref=db.backref('parent_project', lazy=True))
+    # timestamp
+    post_date = db.Column(db.DateTime, default=datetime.utcnow)
+    # just for query more earily
+    start_date = db.Column(db.DateTime)
+    finish_date = db.Column(db.DateTime)
+    deadline_date = db.Column(db.DateTime)
 
     def current_stage(self):
         """Get current stage."""
-        return self.stages[self.current_stage_index]
+        if self.progress <= 0:
+            return None
+        else:
+            return self.stages[self.progress-1]
 
     def current_phase(self):
         """Get current phase."""
+        if not self.current_stage():
+            return None
         if self.current_stage().phases:
             return self.current_stage().phases[-1]
         else:
-            return False
+            return None
 
-    def start(self):
+    def doStart(self, operator_id):
         """Start this project."""
-        # start project
+        if self.discard:
+            raise Exception("Discard project can't start!")
+
+        # setting project status & progress
         self.status = 'progress'
+        self.progress = 1
         self.start_date = datetime.utcnow()
 
-        deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need)
+        # add new phase
+        current_stage = self.current_stage()
+        deadline = datetime.utcnow() + timedelta(days=current_stage.days_planned)
         new_phase = Phase(
-            parent_stage=self.current_stage(),
-            parent_project=self,
-            start_date=datetime.utcnow(),
+            stage=current_stage,
+            project=self,
             deadline_date=deadline
         )
         db.session.add(new_phase)
+        self.deadline_date = deadline
+        # logging
+        new_log = ProjectLog(
+            project=self,
+            phase=new_phase,
+            log_type='start',
+            operator_user_id=operator_id
+        )
+        db.session.add(new_log)
 
         # create a new delay counter
         addDelayCounter(self.id, deadline)
         db.session.commit()
         return self
 
-    def modify(self, client_id, feedback, confirm):
-        """Set the status to 'modify'."""
-        # current phase update
-        self.current_phase().client_feedback = feedback
-        self.current_phase().client_user_id = client_id
-
-        if confirm:
-            # add notice
-            new_notice = ProjectNotice(
-                parent_project_id=self.id,
-                parent_stage_id=self.current_stage().id,
-                parent_phase_id=self.current_phase().id,
-                from_user_id=client_id,
-                to_user_id=self.creator.id,
-                notice_type='modify',
-                content=feedback
-            )
-            db.session.add(new_notice)
-
-            self.status = 'modify'
-            self.current_phase().feedback_date = datetime.utcnow()
-            # craete new phase in current stage
-            new_phase = Phase(
-                parent_project=self,
-                parent_stage=self.current_stage(),
-            )
-            days_need = math.floor(self.current_stage(
-            ).days_need*0.2)+1
-            db.session.add(new_phase)
-            deadline = datetime.utcnow() + timedelta(days=days_need)
-
-            new_phase.deadline_date = deadline
-            wx_message(new_notice)
-            # create a new delay counter
-            addDelayCounter(self.id, deadline)
-        db.session.commit()
-        return self
-
-    def finish(self, client_id, feedback):
-        """Finish current stage."""
-        # add notice
-        new_notice = ProjectNotice(
-            parent_project_id=self.id,
-            parent_stage_id=self.current_stage().id,
-            parent_phase_id=self.current_phase().id,
-            from_user_id=client_id,
-            to_user_id=self.creator.id,
-            notice_type='pass',
-            content=feedback
-        )
-        db.session.add(new_notice)
-
-        # current phase update
-        self.status = 'finish'
-        self.current_phase().feedback_date = datetime.utcnow()
-        self.current_phase().client_feedback = feedback
-        self.current_phase().client_user_id = client_id
-        nextStageStart(self)
-        wx_message(new_notice)
-        db.session.commit()
-        return self
-
-    def upload(self, creator_id, upload, upload_files, confirm):
-        """upload current stage."""
-        # current phase update
-        self.current_phase().creator_user_id = creator_id
-        self.current_phase().creator_upload = upload
-        self.current_phase().upload_files = []
+    def editUpload(self, operator_id, creator_id, upload, upload_files):
+        current_phase = self.current_phase()
+        current_phase.creator_user_id = creator_id
+        current_phase.creator_upload = upload
+        current_phase.upload_files = []
         for upload_file in upload_files:
-            self.current_phase().upload_files.append(
+            current_phase.upload_files.append(
                 File.query.get(upload_file['id']))
 
-        if confirm:
-            self.status = 'pending'
-            self.current_phase().upload_date = datetime.utcnow()
-            # add notice
-            new_notice = ProjectNotice(
-                parent_project_id=self.id,
-                parent_stage_id=self.current_stage().id,
-                parent_phase_id=self.current_phase().id,
-                from_user_id=creator_id,
-                to_user_id=self.client.id,
-                notice_type='upload',
-                content=upload
-            )
-            cover_file = File.query.get(upload_files[0]['id'])
-            if cover_file.previews:
-                new_notice.cover_url = cover_file.previews[0].url
-            db.session.add(new_notice)
-            wx_message(new_notice)
-            # stop the delay counter
-            removeDelayCounter(self.id)
+        db.session.commit()
+
+    def doUpload(self, operator_id, creator_id, upload_content, upload_files):
+        """upload current stage."""
+        if self.discard or self.pause:
+            raise Exception("Discard or paused project can't upload!")
+        # current phase update
+        current_phase = self.current_phase()
+        current_phase.creator_user_id = creator_id
+        current_phase.creator_upload = upload_content
+        current_phase.upload_files = []
+        for upload_file in upload_files:
+            current_phase.upload_files.append(
+                File.query.get(upload_file['id']))
+        current_phase.upload_date = datetime.utcnow()
+
+        # project update
+        self.status = 'pending'
+        self.delay = False
+        
+        # logging
+        new_log = ProjectLog(
+            project=self,
+            phase=current_phase,
+            log_type='upload',
+            content=upload_content,
+            operator_user_id=operator_id
+        )
+        db.session.add(new_log)
+        self.deadline_date = None
+        # stop the delay counter
+        removeDelayCounter(self.id)
         db.session.commit()
         return self
 
-    def goBack(self):
-        """go back"""
-        print('go back')
-        if self.status == 'finish':
-            deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need)
-            new_phase = Phase(
-                parent_stage=self.current_stage(),
-                parent_project=self,
-                start_date=datetime.utcnow(),
-                deadline_date=deadline
-            )
-            db.session.add(new_phase)
-            self.status = 'progress'
-            addDelayCounter(self.id, deadline)
-            db.session.commit()
-        elif self.current_stage_index > 0:
-            self.current_stage().phases = []
-            self.current_stage_index -= 1
-            deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need)
-            new_phase = Phase(
-                parent_stage=self.current_stage(),
-                parent_project=self,
-                start_date=datetime.utcnow(),
-                deadline_date=deadline
-            )
-            db.session.add(new_phase)
-            self.status = 'progress'
-            addDelayCounter(self.id, deadline)
-            db.session.commit()
-        else:
-            self.current_stage().phases = []
-            self.status = 'await'
-            removeDelayCounter(self.id)
-            db.session.commit()
+    def editFeedback(self, operator_id, client_id, feedback_content):
+        """Set the status to 'modify'."""
+        # current phase update
+        current_phase = self.current_phase()
+        current_phase.client_feedback = feedback_content
+        current_phase.client_user_id = client_id
+        db.session.commit()
         return self
 
-    def discard(self):
-        """Discard this project."""
+    def doFeedback(self, operator_id, client_id, feedback_content, is_pass):
+        """Set the status to 'modify'."""
+        if self.discard or self.pause:
+            raise Exception("Discard or paused project can't set to modify!")
+
         # current phase update
-        self.status = 'discard'
-        if self.current_phase():
-            new_pause = PhasePause(
+        current_phase = self.current_phase()
+        current_phase.client_feedback = feedback_content
+        current_phase.client_user_id = client_id
+        current_phase.feedback_date = datetime.utcnow()
+
+        if is_pass:
+            # if current stage is not the last one, then go into next stage
+            if self.progress < len(self.stages):
+                # project update
+                self.progress += 1
+                self.status = 'progress'
+
+                # next stage phase update
+                next_stage = self.current_stage()
+
+                deadline = datetime.utcnow() + timedelta(days=next_stage.days_planned)
+                new_phase = Phase(
+                    project=self,
+                    stage=next_stage,
+                    deadline_date=deadline
+                )
+                db.session.add(new_phase)
+                # create a new delay counter
+                addDelayCounter(self.id, deadline)
+            else:
+                # project update
+                self.progress = -1
+                self.status = 'finish'
+                self.finish_date = datetime.utcnow()
+        else:
+            # project update
+            self.status = 'modify'
+
+            # craete new phase in current stage
+            current_stage = self.current_stage()
+            days_required = math.floor(current_stage.days_planned*0.2)+1
+            deadline = datetime.utcnow() + timedelta(days=days_required)
+            new_phase = Phase(
+                project=self,
+                stage=current_stage,
+                deadline_date=deadline
+            )
+            db.session.add(new_phase)
+            # create a new delay counter
+            addDelayCounter(self.id, deadline)
+
+        # logging
+        new_log = ProjectLog(
+            project=self,
+            phase=current_phase,
+            log_type=('modify', 'pass')[is_pass],
+            content=feedback_content,
+            operator_user_id=operator_id
+        )
+        db.session.add(new_log)
+        db.session.commit()
+
+    def doChangeStage(self, operator_id, progress_index):
+        """change stage"""
+        if self.discard or self.pause:
+            raise Exception("Discard or paused project can't change stage!")
+
+        current_phase = self.current_phase()
+        if current_phase:
+            db.session.delete(current_phase)
+        self.progress = progress_index
+        self.finish_date = None
+        
+        if progress_index == 0 or progress_index == -1:
+            self.delay = False
+            self.deadline_date = None
+            if progress_index == 0:
+                self.status = 'await'
+                self.start_date = None
+            else:
+                self.status = 'finish'
+                self.finish_date = datetime.utcnow()
+        else:
+            next_stage = self.stages[progress_index-1]
+            deadline = datetime.utcnow() + timedelta(days=next_stage.days_planned)
+            new_phase = Phase(
+                project=self,
+                stage=next_stage,
+                deadline_date=deadline
+            )
+            db.session.add(new_phase)
+            addDelayCounter(self.id, deadline)
+
+            self.status = 'progress'
+
+        # logging
+        new_log = ProjectLog(
+            project=self,
+            log_type='stage',
+            operator_user_id=operator_id
+        )
+        db.session.add(new_log)
+        db.session.commit()
+
+    def doDiscard(self, operator_id):
+        """Discard this project."""
+        if self.progress > 0:
+            self.doPause(operator_id, logging=False)
+
+        # update projcet
+        self.discard = True
+
+        # logging
+        new_log = ProjectLog(
+            project=self,
+            phase=self.current_phase(),
+            log_type='discard',
+            operator_user_id=operator_id
+        )
+        db.session.add(new_log)
+        db.session.commit()
+
+    def doRecover(self, operator_id):
+        """Recover this project."""
+        # update projcet
+        self.discard = False
+
+        # logging
+        new_log = ProjectLog(
+            project=self,
+            log_type='recover',
+            operator_user_id=operator_id
+        )
+        db.session.add(new_log)
+
+        db.session.commit()
+
+        if self.pause:
+            self.doResume(operator_id, logging=False)
+
+    def doPause(self, operator_id, logging=True):
+        """Pause this project."""
+        if self.discard or self.progress == 0 or self.progress == -1:
+            raise Exception("Discard project can't pause!")
+
+        # current phase update
+        current_phase = self.current_phase()
+        if current_phase:
+            new_pause = ProjectPause(
                 pause_date=datetime.utcnow()
             )
             db.session.add(new_pause)
-            self.current_phase().pauses.append(new_pause)
+            current_phase.pauses.append(new_pause)
+            self.deadline_date = None
             # stop the delay counter
             removeDelayCounter(self.id)
-        db.session.commit()
-        return self
 
-    def resume(self):
+        # update projcet
+        self.pause = True
+
+        # logging
+        if logging:
+            new_log = ProjectLog(
+                project=self,
+                phase=current_phase,
+                log_type='pause',
+                operator_user_id=operator_id
+            )
+            db.session.add(new_log)
+        db.session.commit()
+
+    def doResume(self, operator_id, logging=True):
         """Resume this project."""
-        # current phase update
-        if self.current_phase():
-            if self.current_phase().feedback_date:
-                self.status = 'finish'
-                nextStageStart(self)
-            elif self.current_phase().upload_date:
-                self.status = 'pending'
-            elif self.current_phase().start_date:
-                if len(self.current_stage().phases) > 1:
-                    self.status = 'modify'
-                else:
-                    self.status = 'progress'
+        if self.discard or self.progress == 0 or self.progress == -1:
+            raise Exception("Discard project can't resume!")
 
-                # create a new delay counter
-                offset = self.current_phase().start_date - \
-                    self.current_phase().pauses[-1].pause_date
-                if timedelta(days=self.current_stage().days_need) > self.current_phase().pauses[-1].pause_date - self.current_phase().start_date:
-                    deadline = datetime.utcnow() + timedelta(days=self.current_stage().days_need) + offset
-                    self.current_phase().deadline_date = deadline
-                    addDelayCounter(self.id, deadline)
-                else:
-                    self.status = 'delay'
-            else:
-                self.status = 'await'
-            self.current_phase().pauses[-1].resume_date = datetime.utcnow()
-        else:
-            self.status = 'await'
-        db.session.commit()
-        return self
-
-    def postpone(self, days):
-        """postpone this stage."""
-        # current phase update
-        
-        deadline = self.current_phase().start_date + \
-            timedelta(days=self.current_stage().days_need)
-        self.current_phase().deadline_date = deadline
-
-        if deadline>datetime.utcnow():
-            if len(self.current_stage().phases) > 1:
-                self.status = 'modify'
-            else:
-                self.status = 'progress'
-
+        # update phase deadline
+        current_phase = self.current_phase()
+        if current_phase:
+            offset = datetime.utcnow() - current_phase.pauses[-1].pause_date
+            deadline = current_phase.deadline_date + offset
+            current_phase.deadline_date = deadline
+            current_phase.pauses[-1].resume_date = datetime.utcnow()
+            self.deadline_date = deadline
             # create a new delay counter
             addDelayCounter(self.id, deadline)
-        db.session.commit()
-        return self
 
-    def abnormal(self):
-        """Set to abnormal."""
+        # update projcet
+        self.pause = False
+
+        # logging
+        if logging:
+            new_log = ProjectLog(
+                project=self,
+                phase=current_phase,
+                log_type='resume',
+                operator_user_id=operator_id
+            )
+            db.session.add(new_log)
+        db.session.commit()
+
+    def doChangeDDL(self, operator_id, deadline):
+        """change the current ddl."""
+        if self.progress <= 0:
+            raise Exception("Project is not in progress!")
+
         # current phase update
-        self.status = 'abnormal'
-        new_pause = PhasePause(
-            pause_date=datetime.utcnow()
-        )
-        db.session.add(new_pause)
-        self.current_phase().pauses.append(new_pause)
-        # stop the delay counter
-        removeDelayCounter(self.id)
-        db.session.commit()
-        return self
+        current_phase = self.current_phase()
+        current_phase.deadline_date = deadline
+        self.deadline_date = deadline
+        if deadline < datetime.utcnow():
+            self.delay = True
+        else:
+            self.delay = False
+            # create a new delay counter
+            addDelayCounter(self.id, deadline)
 
-    def pause(self):
-        """Set to pause."""
-        # current phase update
-        self.status = 'pause'
-        new_pause = PhasePause(
-            pause_date=datetime.utcnow()
+        new_log = ProjectLog(
+            project=self,
+            phase=current_phase,
+            log_type='deadline',
+            operator_user_id=operator_id
         )
-        db.session.add(new_pause)
-        self.current_phase().pauses.append(new_pause)
-        # stop the delay counter
-        removeDelayCounter(self.id)
+        db.session.add(new_log)
         db.session.commit()
-        return self
 
-    def delete(self):
-        """Delte this project."""
+    def doDelete(self):
+        """Delete this project."""
+        pauses = self.pauses
+        for pause in pauses:
+            db.session.delete(pause)
+
+        files = self.files
+        for file in files:
+            db.session.delete(file)
+
+        logs = self.logs
+        for log in logs:
+            db.session.delete(log)
+        
+        phases = self.phases
+        for phase in phases:
+            db.session.delete(phase)
+
         stages = self.stages
         for stage in stages:
-            phases = stage.phases
-            for phase in phases:
-                pauses = phase.pauses
-                for pause in pauses:
-                    db.session.delete(pause)
-                db.session.delete(phase)
             db.session.delete(stage)
+
         db.session.delete(self)
         removeDelayCounter(self.id)
         db.session.commit()
@@ -374,11 +456,11 @@ class Project(db.Model):
     def delete_all_project():
         projects = Project.query.all()
         for project in projects:
-            project.delete()
+            project.doDelete()
         print('all project deleted.')
 
     @staticmethod
-    def create_project(title, client_id, creator_id, design, stages, tags, files, confirm):
+    def create_project(operator_id, title, client_id, creator_id, design, stages, tags, files):
         """Create new project."""
         # create project
         new_project = Project(
@@ -393,8 +475,8 @@ class Project(db.Model):
         for stage in stages:
             new_stage = Stage(
                 name=stage['stage_name'],
-                parent_project=new_project,
-                days_need=stage['days_need']
+                project=new_project,
+                days_planned=stage['days_planned']
             )
             db.session.add(new_stage)
 
@@ -417,13 +499,18 @@ class Project(db.Model):
                 if _file:
                     new_project.files.append(_file)
 
-        if confirm:
-            new_project.status = 'await'
+        new_log = ProjectLog(
+            project=new_project,
+            log_type='create',
+            operator_user_id=operator_id
+        )
+        db.session.add(new_log)
+
         db.session.commit()
         return new_project
 
     def __repr__(self):
-        return '<Project %r>' % self.title
+        return '<Project id %s %s>' % (self.id, self.title)
 
 
 class Stage(db.Model):
@@ -432,45 +519,56 @@ class Stage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(128))
     description = db.Column(db.String(512))
-    # one-many: Project.stages-Stage.parent_project
+
+    # remove it
     parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
 
+    # remove it
     days_need = db.Column(db.Integer)
+    days_planned = db.Column(db.Integer)
 
-    # one-many: Phase.parent_stage-Stage.phases
-    phases = db.relationship(
-        'Phase', order_by="Phase.start_date", backref=db.backref('parent_stage', lazy=True))
-    notices = db.relationship(
-        'ProjectNotice', backref=db.backref('parent_stage', lazy=True))
+    # remove it
+    phases2 = db.relationship(
+        'Phase', foreign_keys='Phase.parent_stage_id', order_by="Phase.start_date", backref=db.backref('parent_stage', lazy=True))
 
     def __repr__(self):
-        return '<Stage %r>' % self.id
+        return '<Stage id %s>' % self.id
 
 
 class Phase(db.Model):
     """Phase Model"""
     __tablename__ = 'phases'
     id = db.Column(db.Integer, primary_key=True)
-    parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
-    parent_stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
 
     # remove it
-    days_need = db.Column(db.Integer)
+    parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    # remove it
+    parent_stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
+
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    project = db.relationship('Project', foreign_keys=project_id, order_by="Phase.start_date", backref=db.backref(
+        'phases', lazy=True))
+
+    stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
+    stage = db.relationship('Stage', foreign_keys=stage_id, order_by="Phase.start_date", backref=db.backref(
+        'phases', lazy=True))
 
     creator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     creator = db.relationship('User', foreign_keys=creator_user_id, backref=db.backref(
-        'Phases_as_creator', lazy=True))
+        'phases_as_creator', lazy=True))
     creator_upload = db.Column(db.Text)
-    upload_date = db.Column(db.DateTime)
 
     client_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     client = db.relationship('User', foreign_keys=client_user_id, backref=db.backref(
-        'Phases_as_client', lazy=True))
+        'phases_as_client', lazy=True))
     client_feedback = db.Column(db.Text)
-    feedback_date = db.Column(db.DateTime)
 
+    # time stamp
     start_date = db.Column(db.DateTime, default=datetime.utcnow)
     deadline_date = db.Column(db.DateTime)
+    upload_date = db.Column(db.DateTime)
+    feedback_date = db.Column(db.DateTime)
 
     # many-many: File.phases-Phase.files
     upload_files = db.relationship('File', secondary=PHASE_UPLOAD_FILE,
@@ -479,55 +577,58 @@ class Phase(db.Model):
     # many-many: File.phases-Phase.files
     files = db.relationship('File', secondary=PHASE_FILE,
                             lazy='subquery', backref=db.backref('phases', lazy=True))
-    notices = db.relationship(
-        'ProjectNotice', backref=db.backref('parent_phase', lazy=True))
-    pauses = db.relationship(
-        'PhasePause', backref=db.backref('parent_phase', lazy=True))
-
+    
     def __repr__(self):
-        return '<Phase %r>' % self.id
+        return '<Phase id %s>' % self.id
 
 
-class PhasePause(db.Model):
-    """Phase pauseModel"""
-    __tablename__ = 'phase_pauses'
+class ProjectPause(db.Model):
+    """Pause Model"""
+    __tablename__ = 'project_pauses'
     id = db.Column(db.Integer, primary_key=True)
     pause_date = db.Column(db.DateTime)
     resume_date = db.Column(db.DateTime)
     reason = db.Column(db.String(512))
-    parent_phase_id = db.Column(db.Integer, db.ForeignKey('phases.id'))
+
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    project = db.relationship('Project', foreign_keys=project_id, backref=db.backref(
+        'pauses', lazy=True))
+
+    phase_id = db.Column(db.Integer, db.ForeignKey('phases.id'))
+    phase = db.relationship('Phase', foreign_keys=phase_id, backref=db.backref(
+        'pauses', lazy=True))
 
     def __repr__(self):
-        return '<PhasePause %r>' % self.id
+        return '<ProjectPause id %s>' % self.id
 
 
-class ProjectNotice(db.Model):
-    """ProjectNotice Model"""
-    __tablename__ = 'project_notices'
+class ProjectLog(db.Model):
+    """ProjectLog Model"""
+    __tablename__ = 'project_logs'
     id = db.Column(db.Integer, primary_key=True)
-    send_date = db.Column(db.DateTime, default=datetime.utcnow)
-    read_date = db.Column(db.DateTime)
+    log_date = db.Column(db.DateTime, default=datetime.utcnow)
 
-    parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
-    parent_stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
-    parent_phase_id = db.Column(db.Integer, db.ForeignKey('phases.id'))
-    propose_id = db.Column(db.Integer, db.ForeignKey('proposes.id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
+    project = db.relationship('Project', foreign_keys=project_id, backref=db.backref(
+        'logs', lazy=True))
 
-    notice_type = db.Column(
-        db.Enum('upload', 'pass', 'modify', 'delay', 'propose'),
-        server_default=("upload"))
+    phase_id = db.Column(db.Integer, db.ForeignKey('phases.id'))
+    phase = db.relationship('Phase', foreign_keys=phase_id, backref=db.backref(
+        'logs', lazy=True))
+
+    log_type = db.Column(
+        db.Enum('create', 'start', 'upload', 'pass', 'modify', 'discard', 'recover',
+                'pause', 'resume', 'deadline', 'design', 'stage'),
+        server_default=("start"))
 
     content = db.Column(db.Text)
-    cover_url = db.Column(db.String(512))
-    read = db.Column(db.Boolean, default=False)
 
-    from_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    from_user = db.relationship('User', foreign_keys=from_user_id, backref=db.backref(
-        'project_notices_as_sender', lazy=True))
+    # remove it
+    read = db.Column(db.Boolean,  server_default='f', default=False)
 
-    to_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    to_user = db.relationship('User', foreign_keys=to_user_id, backref=db.backref(
-        'project_notices_as_receiver', lazy=True))
+    operator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    operator = db.relationship('User', foreign_keys=operator_user_id, backref=db.backref(
+        'project_logs_as_operator', lazy=True))
 
     def set_read(self):
         self.read = True
@@ -536,37 +637,18 @@ class ProjectNotice(db.Model):
         return self
 
     def __repr__(self):
-        return '<ProjectNotice %r>' % self.id
-
-
-class Propose(db.Model):
-    """Propose Model"""
-    __tablename__ = 'proposes'
-    id = db.Column(db.Integer, primary_key=True)
-    parent_project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
-    notice = db.relationship(
-        'ProjectNotice', backref='propose', uselist=False)
-    proposer_role = db.Column(
-        db.Enum('creator', 'client'), server_default=("creator"))
-    propose_type = db.Column(db.Enum('postpone', 'overhaul'),
-                             server_default=("postpone"))
-    propose_date = db.Column(db.DateTime)
-
-    def __repr__(self):
-        return '<Phase %r>' % self.id
+        return '<ProjectLog id %s>' % self.id
 
 
 def delay(project_id):
     project = Project.query.get(project_id)
     if project.status == 'modify' or project.status == 'progress':
-        project.status = 'delay'
+        project.delay = True
     db.session.commit()
-    print('project_'+str(project_id)+': delay!')
+    print('%d project delay!' % project_id)
 
 
 def addDelayCounter(project_id, deadline):
-
-    print(deadline)
     scheduler.add_job(
         id='delay_project_' + str(project_id),
         func=delay,
@@ -576,36 +658,13 @@ def addDelayCounter(project_id, deadline):
         replace_existing=True,
         misfire_grace_time=2592000
     )
-    print('addCounter: '+str(project_id))
+    print('%d project addCounter: %s' % (project_id, deadline))
 
 
 def removeDelayCounter(project_id):
     if scheduler.get_job('delay_project_'+str(project_id)):
         scheduler.remove_job('delay_project_'+str(project_id))
-        print('removeCounter: '+str(project_id))
-
-
-def nextStageStart(project):
-    # if current stage is not the last one, then go into next stage
-    if project.current_stage_index < len(project.stages)-1:
-        # next stage phase update
-        project.current_stage_index += 1
-        next_stage = project.stages[project.current_stage_index]
-
-        project.status = 'progress'
-
-        deadline = datetime.utcnow() + timedelta(days=next_stage.days_need)
-        new_phase = Phase(
-            parent_stage=next_stage,
-            parent_project=project,
-            deadline_date=deadline
-        )
-        db.session.add(new_phase)
-
-        # create a new delay counter
-        addDelayCounter(project.id, deadline)
-    else:
-        project.finish_date = datetime.utcnow()
+        print('%d project removeCounter' % project_id)
 
 
 def wx_message(notice):

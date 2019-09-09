@@ -1,7 +1,7 @@
 from flask_restplus import Resource, reqparse, fields, marshal
 from flask import g, request
 from .. import api, db, app
-from ..model import User, Group, ProjectNotice
+from ..model import User, Group
 from ..utility import buildUrl, getAvatar,getStageIndex,getPhaseIndex
 from werkzeug.security import generate_password_hash
 from .decorator import permission_required, admin_required
@@ -253,78 +253,78 @@ M_MIN_STAGE = api.model('stage', {
     'name': fields.String(),
 })
 
-M_PROJECT_NOTICE = api.model('project_notice', {
-    'id': fields.Integer(),
-    'from_user': fields.Nested(M_MIN_USER),
-    'notice_type': fields.String(),
-    'send_date': fields.String,
-    'parent_project': fields.Nested(M_MIN_PROJECT),
-    'parent_phase': fields.Nested(M_MIN_PHASE),
-    'parent_stage': fields.Nested(M_MIN_STAGE),
-    'stage_index': fields.Integer(attribute=lambda x: getStageIndex(x.parent_stage)),
-    'phase_index': fields.Integer(attribute=lambda x: getPhaseIndex(x.parent_phase)),
-    'cover_url': fields.String(attribute=lambda x: buildUrl(x.cover_url)),
-    'content': fields.String(),
-    'read': fields.Integer()
-})
+# M_PROJECT_NOTICE = api.model('project_notice', {
+#     'id': fields.Integer(),
+#     'from_user': fields.Nested(M_MIN_USER),
+#     'notice_type': fields.String(),
+#     'send_date': fields.String,
+#     'parent_project': fields.Nested(M_MIN_PROJECT),
+#     'parent_phase': fields.Nested(M_MIN_PHASE),
+#     'parent_stage': fields.Nested(M_MIN_STAGE),
+#     'stage_index': fields.Integer(attribute=lambda x: getStageIndex(x.parent_stage)),
+#     'phase_index': fields.Integer(attribute=lambda x: getPhaseIndex(x.parent_phase)),
+#     'cover_url': fields.String(attribute=lambda x: buildUrl(x.cover_url)),
+#     'content': fields.String(),
+#     'read': fields.Integer()
+# })
             
 
-M_PROJECT_NOTICES = api.model('project_notices', {
-    'project_notices': fields.List(fields.Nested(M_PROJECT_NOTICE)),
-    'total': fields.Integer,
-    'unread': fields.Integer,
-})
+# M_PROJECT_NOTICES = api.model('project_notices', {
+#     'project_notices': fields.List(fields.Nested(M_PROJECT_NOTICE)),
+#     'total': fields.Integer,
+#     'unread': fields.Integer,
+# })
 
-N_PROJECT_NOTICE = api.namespace('api/project_notices', description='User Operations')
+# N_PROJECT_NOTICE = api.namespace('api/project_notices', description='User Operations')
 
-G_PROJECT_NOTICE = reqparse.RequestParser()\
-    .add_argument('user_id', location='args', type=int, required=True )\
-    .add_argument('only_unread', location='args', type=int, default=1)\
-    .add_argument('page', location='args', type=int, default=1)\
-    .add_argument('pre_page', location='args', type=int, default=10)\
+# G_PROJECT_NOTICE = reqparse.RequestParser()\
+#     .add_argument('user_id', location='args', type=int, required=True )\
+#     .add_argument('only_unread', location='args', type=int, default=1)\
+#     .add_argument('page', location='args', type=int, default=1)\
+#     .add_argument('pre_page', location='args', type=int, default=10)\
 
-U_PROJECT_NOTICE = reqparse.RequestParser()\
-    .add_argument('user_id', type=int, required=True )\
+# U_PROJECT_NOTICE = reqparse.RequestParser()\
+#     .add_argument('user_id', type=int, required=True )\
 
-@N_PROJECT_NOTICE.route('')
-class UserProjectNotiecsApi(Resource):
-    def get(self):
-        args = G_PROJECT_NOTICE.parse_args()
-        user = userCheck(args['user_id'])
-        query = ProjectNotice.query.filter_by(to_user_id=args['user_id']).filter_by(read=False)
-        total = query.all()
-        unread = query.filter_by(read=False).all()
+# @N_PROJECT_NOTICE.route('')
+# class UserProjectNotiecsApi(Resource):
+#     def get(self):
+#         args = G_PROJECT_NOTICE.parse_args()
+#         user = userCheck(args['user_id'])
+#         query = ProjectNotice.query.filter_by(to_user_id=args['user_id']).filter_by(read=False)
+#         total = query.all()
+#         unread = query.filter_by(read=False).all()
 
-        if(args['only_unread']):
-            query = query.filter_by(read=False)
+#         if(args['only_unread']):
+#             query = query.filter_by(read=False)
 
-        notices = query.order_by(ProjectNotice.id.desc()).limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
+#         notices = query.order_by(ProjectNotice.id.desc()).limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
 
-        output = {
-            'project_notices': notices,
-            'total': len(total),
-            'unread':len(unread)
-        }
-        return marshal(output, M_PROJECT_NOTICES, skip_none=True), 200
+#         output = {
+#             'project_notices': notices,
+#             'total': len(total),
+#             'unread':len(unread)
+#         }
+#         return marshal(output, M_PROJECT_NOTICES, skip_none=True), 200
     
-    def put(self):
-        args = U_PROJECT_NOTICE.parse_args()
-        user = userCheck(args['user_id'])
-        query = ProjectNotice.query.filter_by(to_user_id=args['user_id']).filter_by(read=False).order_by(ProjectNotice.id.desc())
+#     def put(self):
+#         args = U_PROJECT_NOTICE.parse_args()
+#         user = userCheck(args['user_id'])
+#         query = ProjectNotice.query.filter_by(to_user_id=args['user_id']).filter_by(read=False).order_by(ProjectNotice.id.desc())
 
-        notices = query.all()
-        for notice in query.all():
-            notice.set_read()
+#         notices = query.all()
+#         for notice in query.all():
+#             notice.set_read()
 
-        return {'message': 'ok'}, 200
+#         return {'message': 'ok'}, 200
 
-@N_PROJECT_NOTICE.route('/<int:notice_id>')
-class UserProjectNotiecApi(Resource): 
-    def put(self, notice_id):
-        notice = projectNoticeCheck(notice_id)
-        notice.set_read()
+# @N_PROJECT_NOTICE.route('/<int:notice_id>')
+# class UserProjectNotiecApi(Resource): 
+#     def put(self, notice_id):
+#         notice = projectNoticeCheck(notice_id)
+#         notice.set_read()
 
-        return {'message': 'ok'}, 200
+#         return {'message': 'ok'}, 200
 
 N_GROUP = api.namespace('api/groups', description='Group Operations')
 
@@ -480,9 +480,9 @@ def userCheck(user_id):
     else:
         return user
 
-def projectNoticeCheck(notice_id):
-    notice = ProjectNotice.query.get(notice_id)
-    if not notice:
-        api.abort(400, "notice is not exist.")
-    else:
-        return notice
+# def projectNoticeCheck(notice_id):
+#     notice = ProjectNotice.query.get(notice_id)
+#     if not notice:
+#         api.abort(400, "notice is not exist.")
+#     else:
+#         return notice

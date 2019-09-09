@@ -39,9 +39,9 @@ M_USER = api.model('user', {
     'role': fields.String(
         attribute=lambda x: str(x.role.name)
     ),
-    'unread_count': fields.Integer(
-        attribute=lambda x: len(list(filter(is_unread, x.project_notices_as_receiver)))
-    ),
+    # 'unread_count': fields.Integer(
+    #     attribute=lambda x: len(list(filter(is_unread, x.project_notices_as_receiver)))
+    # ),
     'followed_count': fields.Integer(
         attribute=lambda x: len(x.followed_users)
     ),
@@ -93,9 +93,7 @@ class MeApi(Resource):
     def get(self):
         args = g_user.parse_args()
         try:
-            print(args['token'])
             data = jwt.decode(args['token'], app.config['SECRET_KEY'])
-            print(data)
         except Exception as e:
             print(e)
             return api.abort(401, "Bad token.")
@@ -105,6 +103,7 @@ class MeApi(Resource):
             output = {
                 'user': user,
             }
+            print("%s is log in."%user.name)
             return user, 200
         else:
             return api.abort(401, "User is not exist")
