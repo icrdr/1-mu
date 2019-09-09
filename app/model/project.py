@@ -70,7 +70,7 @@ class Project(db.Model):
     # remove it
     current_stage_index = db.Column(db.Integer, default=0)
     status = db.Column(
-        db.Enum('progress', 'modify', 'pending', 'await', 'finish'),
+        db.Enum('progress', 'modify', 'pending', 'await', 'finish', 'pause', 'delay', 'discard', 'draft'),
         server_default=("await"))
 
     progress = db.Column(db.Integer, default=0)
