@@ -167,7 +167,6 @@ class Role(db.Model):
                 role.add_permission(perm)
             role.default = (role.name == default_role)
             db.session.add(role)
-            print(role)
         db.session.commit()
 
     def add_permission(self, perm):
