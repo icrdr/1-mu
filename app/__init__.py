@@ -70,12 +70,11 @@ def dropProject():
 
 @app.cli.command()
 def fixProject():
-    projcets = model.Project.query.filter(model.Project.delay==True).filter(model.Project.discard==False).all()
+    projcets = model.Project.query.filter(model.Project.pause==True).filter(model.Project.discard==False).all()
     for projcet in projcets:
         print(projcet)
-        projcet.delay=False
-        projcet.pause=True
-        projcet.doChangeDDL(1,datetime(2019, 9, 20, 0, 0, 0))
+        projcet.doPause()
+        # projcet.doChangeDDL(1,datetime(2019, 9, 20, 0, 0, 0))
         db.session.commit()
         
 @app.cli.command()
