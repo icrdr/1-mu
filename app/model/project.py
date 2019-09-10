@@ -275,7 +275,7 @@ class Project(db.Model):
             else:
                 self.status = 'finish'
                 self.finish_date = datetime.utcnow()
-            
+
             removeDelayCounter(self.id)
         else:
             next_stage = self.stages[progress_index-1]
@@ -517,6 +517,7 @@ class Stage(db.Model):
     description = db.Column(db.String(512))
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
     days_planned = db.Column(db.Integer)
+
     def __repr__(self):
         return '<Stage id %s>' % self.id
 
@@ -527,13 +528,13 @@ class Phase(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     project_id = db.Column(db.Integer, db.ForeignKey('projects.id'))
-    project = db.relationship('Project', foreign_keys=project_id, order_by="Phase.start_date", backref=db.backref(
-        'phases', lazy=True))
+    project = db.relationship('Project', foreign_keys=project_id, backref=db.backref(
+        'phases', order_by="Phase.start_date", lazy=True))
 
     stage_id = db.Column(db.Integer, db.ForeignKey('stages.id'))
-    stage = db.relationship('Stage', foreign_keys=stage_id, order_by="Phase.start_date", backref=db.backref(
-        'phases', lazy=True))
-    
+    stage = db.relationship('Stage', foreign_keys=stage_id, backref=db.backref(
+        'phases', order_by="Phase.start_date", lazy=True))
+
     creator_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     creator = db.relationship('User', foreign_keys=creator_user_id, backref=db.backref(
         'phases_as_creator', lazy=True))
@@ -610,6 +611,7 @@ class ProjectLog(db.Model):
     def __repr__(self):
         return '<ProjectLog id %s>' % self.id
 
+
 class ProjectNotice(db.Model):
     """ProjectNotice Model"""
     __tablename__ = 'project_notices'
@@ -644,6 +646,7 @@ def delay(project_id):
     db.session.commit()
     print('%d project delay!' % project_id)
 
+
 def addDelayCounter(project_id, deadline):
     scheduler.add_job(
         id='delay_project_' + str(project_id),
@@ -656,10 +659,12 @@ def addDelayCounter(project_id, deadline):
     )
     print('%d project addCounter: %s' % (project_id, deadline))
 
+
 def removeDelayCounter(project_id):
     if scheduler.get_job('delay_project_'+str(project_id)):
         scheduler.remove_job('delay_project_'+str(project_id))
         print('%d project removeCounter' % project_id)
+
 
 def send_message(log, to_user):
     new_notice = ProjectNotice(
