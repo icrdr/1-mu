@@ -691,7 +691,7 @@ def send_message(log, to_user):
             "url": "http://beta.1-mu.net/projects/{}?phase_id={}".format(log.project_id, log.phase_id),
             "data": {
                 "first": {
-                    "value": "企划名：{}-{}".format(log.project.title, log.project.current_stage().name),
+                    "value": "企划名：{}-{}".format(log.project.title, log.phase.stage.name),
                 },
                 "keyword1": {
                     "value": "{} 提交了阶段成品".format(log.operator.name),
@@ -714,7 +714,7 @@ def send_message(log, to_user):
             "url": "http://beta.1-mu.net/projects/{}?phase_id={}".format(log.project_id, log.phase_id),
             "data": {
                 "first": {
-                    "value": "企划名：{}-{}".format(log.project.title, log.project.current_stage().name),
+                    "value": "企划名：{}-{}".format(log.project.title, log.phase.stage.name),
                 },
                 "keyword1": {
                     "value": "{} 提出了修改建议".format(log.operator.name),
@@ -737,7 +737,7 @@ def send_message(log, to_user):
             "url": "http://beta.1-mu.net/projects/{}?phase_id={}".format(log.project_id, log.phase_id),
             "data": {
                 "first": {
-                    "value": "企划名：{}-{}".format(log.project.title, log.project.current_stage().name),
+                    "value": "企划名：{}-{}".format(log.project.title, log.phase.stage.name),
                 },
                 "keyword1": {
                     "value": "{} 审核通过当前阶段".format(log.operator.name),
