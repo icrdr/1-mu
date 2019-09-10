@@ -450,10 +450,11 @@ class PorjectUploadApi(Resource):
             api.abort(500, '[Sever Error]: %s' % error)
 
 
-MODIFY_PROJECT = reqparse.RequestParser()\
+FEEDBACK_PROJECT = reqparse.RequestParser()\
     .add_argument('feedback', required=True)\
     .add_argument('is_pass', type=int, default=0)\
-    .add_argument('confirm', type=int, default=0)
+    .add_argument('confirm', type=int, default=0)\
+    .add_argument('is_pause', type=int, default=0)
 
 
 @N_PROJECT.route('/<int:project_id>/feedback')
@@ -461,7 +462,7 @@ class PorjectModifyApi(Resource):
     @api.marshal_with(M_PROJECT)
     @permission_required()
     def put(self, project_id):
-        args = MODIFY_PROJECT.parse_args()
+        args = FEEDBACK_PROJECT.parse_args()
         project = Project.query.get(project_id)
         if not g.current_user.can(PERMISSIONS['EDIT']):
             if g.current_user.id != project.client_user_id:
@@ -484,6 +485,10 @@ class PorjectModifyApi(Resource):
                     args['feedback'],
                     args['is_pass']
                 )
+                if args['is_pause'] and project.status!='finish':
+                    project.doPause(1)
+                    project.creator_user_id=1
+                    db.session.commit()
             else:
                 project.editFeedback(
                     g.current_user.id,
