@@ -154,12 +154,12 @@ def getAttr(data_raw):
                     pd += pause.resume_date - pause.pause_date
             ud_total += ud - pd
             dd_total += dd - pd
-        speed = math.atan(dd_total.seconds/ud_total.seconds)/(math.pi/2)
+        speed = math.atan(dd_total.total_seconds()/ud_total.total_seconds())/(math.pi/2)
         speed = interp(speed, [0, 1], [1, 5])
 
         energy = len(phases_sort)/delta_time.days
-        energy = clip(energy, 0, 3)
-        energy = interp(energy, [0, 3], [1, 5])
+        energy = clip(energy, 0, 2)
+        energy = interp(energy, [0, 2], [1, 5])
     else:
         energy = 0
         speed = 0
@@ -168,17 +168,29 @@ def getAttr(data_raw):
     project_sample = data_raw['project_sample']
     overtime_sum = data_raw['overtime_sum']
 
-    contribution_s = (len(stages_d)+len(stages))*10 + \
-        len(files_ref) * 3+len(project_sample)*20
+    files_s = 0
+    for file in files_ref:
+        if len(file.tags)<4:
+            files_s += 1
+        elif len(file.tags)<6:
+            files_s += 2
+        elif len(file.tags)<8:
+            files_s += 3
+        elif len(file.tags)<10:
+            files_s += 4
+        else:
+            files_s += 5
+
+    contribution_s = (len(stages_d)+len(stages))*10 + files_s +len(project_sample)*20
     if delta_days >= 1 and contribution_s > 0:
         contribution = contribution_s/delta_days/10
         contribution = clip(contribution, 0, 2)
         contribution = interp(contribution, [0, 2], [1, 5])
     else:
         contribution = 0
-
-    score = len(stages_d)*10+len(stages)*15+len(files_ref) * \
-        1+len(project_sample)*20-overtime_sum/86400
+    
+    score = len(stages_d)*10+len(stages)*20 + files_s +len(project_sample)*30-overtime_sum/86400
+    score = max(score,0)
     return {
         'power': round(power, 1),
         'speed': round(speed, 1),
@@ -187,7 +199,6 @@ def getAttr(data_raw):
         'contribution': round(contribution, 1),
         'score': round(score),
     }
-
 
 def projectCheck(project_id):
     project = Project.query.get(project_id)
