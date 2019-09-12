@@ -115,9 +115,9 @@ def getAttr(data_raw):
         phases_count += len(stage.phases)
 
     if stages:
-        power = (1-phases_count/(len(stages)*4))
-        power = clip(power, 0, 1)
-        power = interp(power, [0, 1], [1, 5])
+        power = (1-phases_count/(len(stages)*5))
+        power = clip(power, 0, 4/5)
+        power = interp(power, [0, 4/5], [1, 5])
     else:
         power = 0
 
@@ -129,9 +129,9 @@ def getAttr(data_raw):
         phases_d_count += len(stage.phases)
 
     if stages_d:
-        knowledge = (1-phases_d_count/(len(stages_d)*4))
-        knowledge = clip(knowledge, 0, 1)
-        knowledge = interp(knowledge, [0, 1], [1, 5])
+        knowledge = (1-phases_d_count/(len(stages_d)*5))
+        knowledge = clip(knowledge, 0, 4/5)
+        knowledge = interp(knowledge, [0, 4/5], [1, 5])
 
     else:
         knowledge = 0
@@ -154,8 +154,8 @@ def getAttr(data_raw):
                     pd += pause.resume_date - pause.pause_date
             ud_total += ud - pd
             dd_total += dd - pd
-        speed = math.atan(dd_total.total_seconds()/ud_total.total_seconds())/(math.pi/2)
-        speed = interp(speed, [0, 1], [1, 5])
+        speed = math.atan(dd_total.total_seconds()*0.8/ud_total.total_seconds())/(math.pi/2)
+        speed = interp(speed, [0, 1], [0, 5])
 
         energy = len(phases_sort)/delta_time.days
         energy = clip(energy, 0, 2)
