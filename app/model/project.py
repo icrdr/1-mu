@@ -519,7 +519,7 @@ class Stage(db.Model):
     days_planned = db.Column(db.Integer)
 
     def __repr__(self):
-        return '<Stage id %s>' % self.id
+        return '<Stage id %s %s>' % (self.id, self.name)
 
 
 class Phase(db.Model):

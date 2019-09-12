@@ -3,6 +3,7 @@ from flask import g, request
 from .. import api, db, app
 from ..model import User, Group, ProjectNotice
 from ..utility import buildUrl, getAvatar,getStageIndex,getPhaseIndex
+from .utility import groupCheck, userCheck, projectNoticeCheck
 from werkzeug.security import generate_password_hash
 from .decorator import permission_required, admin_required
 PERMISSIONS = app.config['PERMISSIONS']
@@ -459,24 +460,3 @@ class GroupRemoveApi(Resource):
         group = groupCheck(group_id)
         group.delete()
         return {'message': 'ok'}, 204
-
-def groupCheck(group_id):
-    group = Group.query.get(group_id)
-    if not group:
-        api.abort(400, "group is not exist.")
-    else:
-        return group
-
-def userCheck(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        api.abort(400, "user is not exist.")
-    else:
-        return user
-
-def projectNoticeCheck(notice_id):
-    notice = ProjectNotice.query.get(notice_id)
-    if not notice:
-        api.abort(400, "notice is not exist.")
-    else:
-        return notice

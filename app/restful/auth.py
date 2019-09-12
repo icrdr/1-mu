@@ -17,6 +17,7 @@ m_wx_user = api.model('user', {
     'sex': fields.String,
     'headimg_url': fields.String,
 })
+
 M_GROUP_MIN = api.model('group_min)', {
     'id': fields.Integer(),
     'name': fields.String(),
@@ -39,9 +40,9 @@ M_USER = api.model('user', {
     'role': fields.String(
         attribute=lambda x: str(x.role.name)
     ),
-    # 'unread_count': fields.Integer(
-    #     attribute=lambda x: len(list(filter(is_unread, x.project_notices_as_receiver)))
-    # ),
+    'unread_count': fields.Integer(
+        attribute=lambda x: len(list(filter(is_unread, x.project_notices)))
+    ),
     'followed_count': fields.Integer(
         attribute=lambda x: len(x.followed_users)
     ),
@@ -51,19 +52,19 @@ M_USER = api.model('user', {
     'wx_user': fields.Nested(m_wx_user),
 })
 
-m_auth = api.model('users', {
+M_AUTH = api.model('user_auth', {
     'user': fields.Nested(M_USER),
     'token': fields.String,
 })
 
-g_auth = reqparse.RequestParser()
-g_auth.add_argument('Authorization', required=True, location='headers')
+G_AUTH = reqparse.RequestParser()\
+    .add_argument('Authorization', required=True, location='headers')
 
 @n_auth.route('')
 class AuthApi(Resource):
-    @api.expect(g_auth)
+    @api.expect(G_AUTH)
     def get(self):
-        args = g_auth.parse_args()
+        args = G_AUTH.parse_args()
         auth_data = args['Authorization'].split(" ")[1]
         auth = base64.b64decode(auth_data).decode('utf-8').split(":")
         user = User.query.filter_by(login=auth[0]).first()
@@ -75,23 +76,22 @@ class AuthApi(Resource):
                     'user': user,
                     'token': token.decode('UTF-8')
                 }
-                return marshal(output, m_auth), 200
+                return marshal(output, M_AUTH), 200
             else:
                 return api.abort(400, "Wrong password.")
         else:
             return api.abort(400, "User isnot exist.")
 
+N_ME = api.namespace('api/me', description='Me')
+G_USER = reqparse.RequestParser()\
+    .add_argument('token', location='cookies')
 
-n_me = api.namespace('api/me', description='Me')
-g_user = reqparse.RequestParser()
-g_user.add_argument('token', location='cookies')
-
-@n_me.route('')
+@N_ME.route('')
 class MeApi(Resource):
     @api.marshal_with(M_USER)
-    @api.expect(g_user)
+    @api.expect(G_USER)
     def get(self):
-        args = g_user.parse_args()
+        args = G_USER.parse_args()
         try:
             data = jwt.decode(args['token'], app.config['SECRET_KEY'])
         except Exception as e:
@@ -100,9 +100,6 @@ class MeApi(Resource):
 
         user = User.query.get(data['id'])
         if user:
-            output = {
-                'user': user,
-            }
             print("%s is log in."%user.name)
             return user, 200
         else:

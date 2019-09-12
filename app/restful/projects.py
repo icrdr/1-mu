@@ -7,6 +7,7 @@ from sqlalchemy import or_, case, and_
 from .. import api, app, db
 from ..model import Stage, Phase, User, File, Project, Tag, Group
 from ..utility import buildUrl, getAvatar
+from .utility import getData, projectCheck, userCheck
 from .decorator import permission_required, admin_required
 import time
 from datetime import datetime
@@ -68,19 +69,32 @@ M_PHASE = api.model('phase', {
     'upload_files': fields.List(fields.Nested(M_FILE)),
     'pauses': fields.List(fields.Nested(M_PAUSE))
 })
-
+M_STAGE_MIN = api.model('stage_min', {
+    'id': fields.Integer,
+    'name': fields.String,
+})
 M_STAGE = api.model('stage', {
     'id': fields.Integer,
     'name': fields.String,
     'days_planned': fields.Integer,
     'phases': fields.List(fields.Nested(M_PHASE))
 })
+
 M_GROUP = api.model('group', {
     'id': fields.Integer,
     'name': fields.String,
     'admins': fields.List(fields.Nested(M_CREATOR)),
     'users': fields.List(fields.Nested(M_CREATOR))
 })
+
+M_PROJECT_LOG = api.model('project_log', {
+    'id': fields.Integer,
+    'log_type': fields.String,
+    'operator': fields.Nested(M_CREATOR),
+    'content': fields.String,
+    'log_date': fields.String,
+})
+
 M_PROJECT = api.model('project', {
     'id': fields.Integer,
     'title': fields.String,
@@ -96,9 +110,29 @@ M_PROJECT = api.model('project', {
     'progress': fields.Integer,
     'stages': fields.List(fields.Nested(M_STAGE)),
     'tags': fields.List(fields.Nested(M_TAG)),
+    'logs': fields.List(fields.Nested(M_PROJECT_LOG)),
     'delay': fields.Boolean,
     'pause': fields.Boolean,
 })
+
+M_PROJECT_MIN = api.model('project_min', {
+    'id': fields.Integer,
+    'title': fields.String,
+    'remark': fields.String,
+    'status': fields.String,
+    'creator': fields.Nested(M_CREATOR),
+    'client': fields.Nested(M_CLIENT),
+    'public_date': fields.String,
+    'start_date': fields.String,
+    'finish_date': fields.String,
+    'deadline_date': fields.String,
+    'progress': fields.Integer,
+    'stages': fields.List(fields.Nested(M_STAGE_MIN)),
+    'tags': fields.List(fields.Nested(M_TAG)),
+    'delay': fields.Boolean,
+    'pause': fields.Boolean,
+})
+
 M_PROJECTS = api.model('projects', {
     'projects': fields.List(fields.Nested(M_PROJECT)),
     'total': fields.Integer,
@@ -140,9 +174,9 @@ class PorjectsApi(Resource):
         args = GET_PROJECT.parse_args()
         query = Project.query
         if args['discard']:
-            query = query.filter(Project.discard==True)
+            query = query.filter(Project.discard == True)
         else:
-            query = query.filter(Project.discard==False)
+            query = query.filter(Project.discard == False)
 
         if args['creator_id']:
             query = query.filter(
@@ -160,9 +194,9 @@ class PorjectsApi(Resource):
 
         if args['status']:
             if 'pause' in args['status']:
-                query = query.filter(Project.pause==True)
+                query = query.filter(Project.pause == True)
             if 'delay' in args['status']:
-                query = query.filter(Project.delay==True)
+                query = query.filter(Project.delay == True)
             query = query.filter(Project.status.in_(args['status']))
 
         if args['start_date']:
@@ -240,7 +274,8 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.deadline_date.desc())
         elif args['order_by'] == 'status':
             if args['order'] == 'asc':
-                query = query.order_by(Project.status.asc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
+                query = query.order_by(Project.status.asc(), Project.pause.desc(
+                ), Project.delay.desc(), Project.id.desc())
             else:
                 query = query.order_by(
                     Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
@@ -485,9 +520,9 @@ class PorjectModifyApi(Resource):
                     args['feedback'],
                     args['is_pass']
                 )
-                if args['is_pause'] and project.status!='finish':
+                if args['is_pause'] and project.status != 'finish':
                     project.doPause(1)
-                    project.creator_user_id=1
+                    project.creator_user_id = 1
                     db.session.commit()
             else:
                 project.editFeedback(
@@ -624,7 +659,7 @@ class PorjectChangeStageApi(Resource):
             api.abort(401, "Project is discard.")
         if project.pause:
             api.abort(401, "Project is paused.")
-        if project.progress==0:
+        if project.progress == 0:
             api.abort(401, "Project can't go back any more")
 
         if project.progress == -1:
@@ -637,67 +672,3 @@ class PorjectChangeStageApi(Resource):
         except Exception as error:
             print('[Sever Error]: %s' % error)
             api.abort(500, '[Sever Error]: %s' % error)
-
-
-N_DASH = api.namespace('api/dashboard', description='projects operations')
-
-GET_DASH = reqparse.RequestParser()\
-    .add_argument('finish_date', required=True, location='args', action='split')\
-
-
-
-@N_DASH.route('/<int:user_id>')
-class DashboardApi(Resource):
-    def get(self, user_id):
-        args = GET_DASH.parse_args()
-        user = userCheck(user_id)
-
-        start = datetime.strptime(
-            args['finish_date'][0], '%Y-%m-%d %H:%M:%S')
-        end = datetime.strptime(
-            args['finish_date'][1], '%Y-%m-%d %H:%M:%S')
-
-        projects = Project.query.join(Project.phases)\
-            .filter(Project.status == 'finish')\
-            .filter(and_(Project.finish_date <= end, Project.finish_date >= start))\
-            .filter(Phase.creator_user_id == user_id).all()
-
-        stages = Stage.query.join(Stage.phases).join(Stage.project)\
-            .filter(Project.status == 'finish')\
-            .filter(and_(Project.finish_date <= end, Project.finish_date >= start))\
-            .filter(Phase.creator_user_id == user_id).all()
-
-        phases = Phase.query.join(Phase.project)\
-            .filter(Project.status == 'finish')\
-            .filter(and_(Project.finish_date <= end, Project.finish_date >= start))\
-            .filter(Phase.creator_user_id == user_id).all()
-
-        overtime = 0
-        for phase in phases:
-            duration = phase.upload_date - phase.deadline_date
-            duration_in_s = int(duration.total_seconds())
-            if duration_in_s > 0:
-                overtime += duration_in_s
-
-        return {
-            'done_overtime': overtime,
-            'done_phases': len(phases),
-            'done_stages': len(stages),
-            'done_projects': len(projects)
-        }, 200
-
-
-def projectCheck(project_id):
-    project = Project.query.get(project_id)
-    if not project:
-        api.abort(400, "Project is not exist.")
-    else:
-        return project
-
-
-def userCheck(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        api.abort(400, "user is not exist.")
-    else:
-        return user

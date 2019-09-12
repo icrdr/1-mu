@@ -85,25 +85,8 @@ def fixCreator():
 def fixStage():
     phases = model.Phase.query.all()
     for phase in phases:
-        phase.project_id = phase.parent_project_id
-        phase.stage_id = phase.parent_stage_id
-
-    stages = model.Stage.query.all()
-    for stage in stages:
-        stage.project_id = stage.parent_project_id
-        stage.days_planned = stage.days_need
-    
-    projects = model.Project.query.all()
-    for project in projects:
-        if project.status =='await':
-            project.progress = 0
-            project.start_date == None
-            project.finish_date == None
-        elif project.status =='finish':
-            project.progress = -1
-        else:
-            project.finish_date == None
-            project.progress = project.current_stage_index+1
+        if not phase.stage_id:
+            db.session.delete(phase)
     db.session.commit()
 
 @app.cli.command()
