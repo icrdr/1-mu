@@ -157,7 +157,7 @@ def getAttr(data_raw):
         speed = math.atan(dd_total.total_seconds()*0.8/ud_total.total_seconds())/(math.pi/2)
         speed = interp(speed, [0, 1], [0, 5])
 
-        energy = len(phases_sort)/delta_time.days
+        energy = len(phases_sort)*0.6/delta_time.days
         energy = clip(energy, 0, 2)
         energy = interp(energy, [0, 2], [1, 5])
     else:
@@ -183,7 +183,7 @@ def getAttr(data_raw):
 
     contribution_s = (len(stages_d)+len(stages_c))*10 + files_s +len(project_sample)*20
     if delta_days >= 1 and contribution_s > 0:
-        contribution = contribution_s/delta_days/10
+        contribution = contribution_s/delta_days/6
         contribution = clip(contribution, 0, 2)
         contribution = interp(contribution, [0, 2], [1, 5])
     else:
