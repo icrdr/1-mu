@@ -189,7 +189,7 @@ def getAttr(data_raw):
     else:
         contribution = 0
     
-    score = len(stages_d)*10+len(stages_c)*20 + files_s +len(project_sample)*30-overtime_sum/86400
+    score = len(stages_d)*10+len(stages_c)*20 + len(files_ref)*2 +len(project_sample)*30-overtime_sum/86400
     score = max(score,0)
     return {
         'power': round(power, 1),
