@@ -2,9 +2,10 @@ from flask_restplus import Resource, reqparse, fields
 from flask import g, request
 from .. import api, db, app, celery
 from celery.result import AsyncResult
-from ..model import File, Project
+from ..model import File, Project, User
 from werkzeug import utils, datastructures
 from .decorator import permission_required, admin_required
+from .utility import getData, projectCheck, userCheck, getAttr
 from datetime import datetime
 from psd_tools import PSDImage
 from PIL import Image
@@ -231,9 +232,9 @@ def transfer2Content(keys, project):
 
             if project.pause:
                 if project.delay:
-                     _str += '（暂停、逾期）'
+                    _str += '（暂停、逾期）'
                 else:
-                     _str += '（暂停）'
+                    _str += '（暂停）'
             elif project.delay:
                 _str += '（逾期）'
             content.append(_str)
@@ -251,6 +252,125 @@ def transfer2Content(keys, project):
         elif key == 'creator':
             content.append(project.creator.name)
     return content
+
+
+def transfer2Header2(keys):
+    header = []
+    for key in keys:
+        if key == '累计提交超时':
+            header.append('ID')
+        elif key == 'phases_overtime':
+            header.append('超时完成的提交数')
+        elif key == 'phases_all':
+            header.append('所有发起的提交数')
+        elif key == 'phases_pass':
+            header.append('审核通过的提交数')
+        elif key == 'phases_modify':
+            header.append('审核不通过的提交数')
+        elif key == 'phases_pending':
+            header.append('未审核的提交数')
+        elif key == 'stages_all':
+            header.append('企划进度')
+        elif key == 'stages_one_pass':
+            header.append('一次通过的阶段数')
+        elif key == 'stages_mod_pass':
+            header.append('修改通过的阶段数')
+        elif key == 'stages_no_pass':
+            header.append('尚未通过的阶段数')
+        elif key == 'stages_one_pass_d':
+            header.append('一次通过的阶段数（草图）')
+        elif key == 'stages_mod_pass_d':
+            header.append('修改通过的阶段数（草图）')
+        elif key == 'stages_no_pass_d':
+            header.append('尚未通过的阶段数（草图）')
+        elif key == 'files_ref':
+            header.append('贡献的参考图')
+        elif key == 'project_sample':
+            header.append('贡献的样图')
+        elif key == 'speed':
+            header.append('手速')
+        elif key == 'power':
+            header.append('绘力')
+        elif key == 'knowledge':
+            header.append('学识')
+        elif key == 'energy':
+            header.append('活力')
+        elif key == 'contribution':
+            header.append('贡献')
+        elif key == 'score':
+            header.append('总分')
+    return header
+
+
+def transfer2Content2(keys, user_id, date_range):
+    data_raw = getData(user_id, date_range)
+    attr_raw = getAttr(data_raw)
+    content = []
+    for key in keys:
+        if key == 'phases_overtime':
+            content.append(data_raw['phases_overtime'])
+        elif key == 'phases_all':
+            content.append(data_raw['phases_all'])
+        elif key == 'phases_pass':
+            content.append(data_raw['phases_pass'])
+        elif key == 'phases_modify':
+            content.append(data_raw['phases_modify'])
+        elif key == 'phases_pending':
+            content.append(data_raw['phases_pending'])
+        elif key == 'stages_all':
+            content.append(data_raw['stages_all'])
+        elif key == 'stages_one_pass':
+            content.append(data_raw['stages_one_pass'])
+        elif key == 'stages_mod_pass_d':
+            content.append(data_raw['stages_mod_pass_d'])
+        elif key == 'stages_no_pass_d':
+            content.append(data_raw['stages_no_pass_d'])
+        elif key == 'stages_one_pass_d':
+            content.append(data_raw['stages_one_pass_d'])
+        elif key == 'stages_mod_pass_d':
+            content.append(data_raw['stages_mod_pass_d'])
+        elif key == 'stages_no_pass_d':
+            content.append(data_raw['stages_no_pass_d'])
+        elif key == 'files_ref':
+            content.append(data_raw['files_ref'])
+        elif key == 'project_sample':
+            content.append(data_raw['project_sample'])
+        elif key == 'speed':
+            content.append(attr_raw['speed'])
+        elif key == 'power':
+            content.append(attr_raw['power'])
+        elif key == 'knowledge':
+            content.append(attr_raw['knowledge'])
+        elif key == 'energy':
+            content.append(attr_raw['energy'])
+        elif key == 'contribution':
+            content.append(attr_raw['contribution'])
+        elif key == 'score':
+            content.append(attr_raw['score'])
+    return content
+
+
+USER_DATA_TABLE = reqparse.RequestParser()\
+    .add_argument('user_id', location='args', required=True, action='split')\
+    .add_argument('date_range', location='args', action='split')
+
+
+@N_DOWNLOAD.route('/users/csv')
+class DownloadUserTableApi(Resource):
+    @permission_required()
+    @api.expect(USER_DATA_TABLE)
+    def get(self):
+        args = USER_DATA_TABLE.parse_args()
+        user_list = User.query.filter(
+            User.id.in_(args['user_id'])).all()
+
+        if user_list:
+            task = exportTableUserData.delay(
+                args['user_id'], args['date_range'])
+
+            return {'task_id': task.id}, 202
+        else:
+            api.abort(400, "user_id doesn't exist")
 
 
 M_RESULT = api.model('result', {
@@ -303,6 +423,31 @@ def exportTableTask(self, project_id, keys, order, order_by):
                 )
 
     return {'current': 100, 'total': 100, 'result': buildUrl(csv_file, dir='')}
+
+
+@celery.task(bind=True)
+def exportTableUserData(self, user_id, keys, date_range):
+    user_list = User.query.filter(User.id.in_(user_id)).all()
+
+    if user_list:
+        csv_path = os.path.join(app.config['DOWNLOAD_FOLDER'], 'temp')
+        if not os.path.exists(csv_path):
+            os.makedirs(csv_path)
+        csv_file = os.path.join(csv_path, str(shortuuid.uuid())+'.csv')
+
+        with open(csv_file, 'w', newline='', encoding="utf-8-sig") as csvfile:
+            csvWriter = csv.writer(
+                csvfile, dialect='excel', quoting=csv.QUOTE_NONNUMERIC,)
+            csvWriter.writerow(transfer2Header2(keys))
+            for i, user in enumerate(user_list):
+                csvWriter.writerow(transfer2Content2(keys, user.id, date_range))
+                self.update_state(
+                    state='PROGRESS',
+                    meta={'current': i+1, 'total': len(user_list)}
+                )
+
+    return {'current': 100, 'total': 100, 'result': buildUrl(csv_file, dir='')}
+
 
 @celery.task(bind=True)
 def downloadZipTask(self, project_id, mode):
