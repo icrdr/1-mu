@@ -137,7 +137,7 @@ def getAttr(data_raw):
         knowledge = 0
 
     power = (knowledge*1 + power*2)/3
-    
+
     phases_all = data_raw['phases_all']
     delta_time = data_raw['delta_time']
     delta_days = delta_time.days
@@ -168,8 +168,9 @@ def getAttr(data_raw):
     project_sample = data_raw['project_sample']
     overtime_sum = data_raw['overtime_sum']
 
-    contribution_s = (len(stages_d)+len(stages))*10+len(files_ref)* 3+len(project_sample)*20
-    if delta_days >= 1 and contribution_s >0:
+    contribution_s = (len(stages_d)+len(stages))*10 + \
+        len(files_ref) * 3+len(project_sample)*20
+    if delta_days >= 1 and contribution_s > 0:
         contribution = contribution_s/delta_days/10
         contribution = clip(contribution, 0, 2)
         contribution = interp(contribution, [0, 2], [1, 5])
@@ -178,6 +179,7 @@ def getAttr(data_raw):
 
     score = len(stages_d)*10+len(stages)*15+len(files_ref) * \
         1+len(project_sample)*20-overtime_sum/86400
+    score = math.min(score, 0)
     return {
         'power': round(power, 1),
         'speed': round(speed, 1),
