@@ -183,8 +183,7 @@ class PorjectsApi(Resource):
                 Project.creator_user_id.in_(args['creator_id']))
 
         if args['participant_id']:
-            query = query.filter(or_(Project.phases.any(
-                creator_user_id=args['participant_id']), Project.creator_user_id.in_(args['participant_id'])))
+            query = query.filter(or_(Project.phases.any(Phase.creator_user_id==args['participant_id']), Project.creator_user_id==args['participant_id']))
 
         if args['client_id']:
             query = query.filter(Project.client_user_id.in_(args['client_id']))
