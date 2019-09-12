@@ -262,7 +262,7 @@ def transfer2Header2(keys):
         elif key == 'name':
             header.append('昵称')
         elif key == 'overtime_sum':
-            header.append('累计提交超时')
+            header.append('累计提交超时（小时）')
         elif key == 'phases_overtime':
             header.append('超时完成的提交数')
         elif key == 'phases_all':
