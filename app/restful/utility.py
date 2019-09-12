@@ -107,20 +107,6 @@ def getData(user_id, date_range=None):
 
 
 def getAttr(data_raw):
-    stages_one_pass = data_raw['stages_one_pass']
-    stages_mod_pass = data_raw['stages_mod_pass']
-    stages = stages_one_pass + stages_mod_pass
-    phases_count = 0
-    for stage in stages:
-        phases_count += len(stage.phases)
-
-    if stages:
-        power = (1-phases_count/(len(stages)*4))
-        power = clip(power, 0, 1)
-        power = interp(power, [0, 1], [1, 5])
-    else:
-        power = 0
-
     stages_one_pass_d = data_raw['stages_one_pass_d']
     stages_mod_pass_d = data_raw['stages_mod_pass_d']
     stages_d = stages_one_pass_d + stages_mod_pass_d
@@ -132,9 +118,22 @@ def getAttr(data_raw):
         knowledge = (1-phases_d_count/(len(stages_d)*4))
         knowledge = clip(knowledge, 0, 1)
         knowledge = interp(knowledge, [0, 1], [1, 5])
-
     else:
         knowledge = 0
+
+    stages_one_pass = data_raw['stages_one_pass']+stages_one_pass_d
+    stages_mod_pass = data_raw['stages_mod_pass']+stages_mod_pass_d
+    stages = stages_one_pass + stages_mod_pass
+    phases_count = 0
+    for stage in stages:
+        phases_count += len(stage.phases)
+
+    if stages:
+        power = (1-phases_count/(len(stages)*4))
+        power = clip(power, 0, 1)
+        power = interp(power, [0, 1], [1, 5])
+    else:
+        power = 0
 
     phases_all = data_raw['phases_all']
     delta_time = data_raw['delta_time']
@@ -166,8 +165,9 @@ def getAttr(data_raw):
     project_sample = data_raw['project_sample']
     overtime_sum = data_raw['overtime_sum']
 
-    contribution_s = (len(stages_d)+len(stages))*10+len(files_ref)* 3+len(project_sample)*20
-    if delta_days >= 1 and contribution_s >0:
+    contribution_s = (len(stages_d)+len(stages))*10 + \
+        len(files_ref) * 3+len(project_sample)*20
+    if delta_days >= 1 and contribution_s > 0:
         contribution = contribution_s/delta_days/10
         contribution = clip(contribution, 0, 2)
         contribution = interp(contribution, [0, 2], [1, 5])
