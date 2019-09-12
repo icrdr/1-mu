@@ -179,7 +179,7 @@ def getAttr(data_raw):
 
     score = len(stages_d)*10+len(stages)*15+len(files_ref) * \
         1+len(project_sample)*20-overtime_sum/86400
-    score = math.min(score, 0)
+    score = min(score, 0)
     return {
         'power': round(power, 1),
         'speed': round(speed, 1),
