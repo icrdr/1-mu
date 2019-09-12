@@ -119,7 +119,7 @@ def getAttr(data_raw):
         power = clip(power, 0, 1)
         power = interp(power, [0, 1], [1, 5])
     else:
-        power = -1
+        power = 0
 
     stages_one_pass_d = data_raw['stages_one_pass_d']
     stages_mod_pass_d = data_raw['stages_mod_pass_d']
@@ -134,7 +134,7 @@ def getAttr(data_raw):
         knowledge = interp(knowledge, [0, 1], [1, 5])
 
     else:
-        knowledge = -1
+        knowledge = 0
 
     phases_all = data_raw['phases_all']
     delta_time = data_raw['delta_time']
@@ -159,20 +159,20 @@ def getAttr(data_raw):
         energy = clip(energy, 0, 3)
         energy = interp(energy, [0, 3], [1, 5])
     else:
-        energy = -1
-        speed = -1
+        energy = 0
+        speed = 0
     user = data_raw['user']
     files_ref = data_raw['files_ref']
     project_sample = data_raw['project_sample']
     overtime_sum = data_raw['overtime_sum']
 
-    if delta_days >= 1:
-        contribution = ((len(stages_d)+len(stages))*5+len(files_ref)
-                        * 1+len(project_sample)*20)/delta_days/10
+    contribution_s = (len(stages_d)+len(stages))*5+len(files_ref)* 1+len(project_sample)*20
+    if delta_days >= 1 and contribution_s >0:
+        contribution = contribution_s/delta_days/10
         contribution = clip(contribution, 0, 2)
         contribution = interp(contribution, [0, 2], [1, 5])
     else:
-        contribution = -1
+        contribution = 0
 
     score = len(stages_d)*10+len(stages)*15+len(files_ref) * \
         1+len(project_sample)*20-overtime_sum/86400
