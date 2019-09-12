@@ -189,7 +189,16 @@ def getAttr(data_raw):
     else:
         contribution = 0
     
-    score = len(stages_d)*10+len(stages_c)*20 + len(files_ref)*2 +len(project_sample)*30-overtime_sum/86400
+    files_s2 = 0
+    for file in files_ref:
+        if len(file.tags)<4:
+            files_s2 += 1
+        elif len(file.tags)<7:
+            files_s2 += 2
+        else:
+            files_s2 += 3
+
+    score = len(stages_d)*10+len(stages_c)*20 + files_s2 +len(project_sample)*30-overtime_sum/86400
     score = max(score,0)
     return {
         'power': round(power, 1),
