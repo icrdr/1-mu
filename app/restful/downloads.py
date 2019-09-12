@@ -257,8 +257,12 @@ def transfer2Content(keys, project):
 def transfer2Header2(keys):
     header = []
     for key in keys:
-        if key == '累计提交超时':
+        if key == 'id':
             header.append('ID')
+        elif key == 'name':
+            header.append('昵称')
+        elif key == 'overtime_sum':
+            header.append('累计提交超时')
         elif key == 'phases_overtime':
             header.append('超时完成的提交数')
         elif key == 'phases_all':
@@ -272,17 +276,23 @@ def transfer2Header2(keys):
         elif key == 'stages_all':
             header.append('企划进度')
         elif key == 'stages_one_pass':
-            header.append('一次通过的阶段数')
+            header.append('一次通过的阶段数（总）')
         elif key == 'stages_mod_pass':
-            header.append('修改通过的阶段数')
+            header.append('修改通过的阶段数（总）')
         elif key == 'stages_no_pass':
-            header.append('尚未通过的阶段数')
+            header.append('尚未通过的阶段数（总）')
         elif key == 'stages_one_pass_d':
             header.append('一次通过的阶段数（草图）')
         elif key == 'stages_mod_pass_d':
             header.append('修改通过的阶段数（草图）')
         elif key == 'stages_no_pass_d':
             header.append('尚未通过的阶段数（草图）')
+        elif key == 'stages_one_pass_c':
+            header.append('一次通过的阶段数（成图）')
+        elif key == 'stages_mod_pass_c':
+            header.append('修改通过的阶段数（成图）')
+        elif key == 'stages_no_pass_c':
+            header.append('尚未通过的阶段数（成图）')
         elif key == 'files_ref':
             header.append('贡献的参考图')
         elif key == 'project_sample':
@@ -302,39 +312,51 @@ def transfer2Header2(keys):
     return header
 
 
-def transfer2Content2(keys, user_id, date_range):
-    data_raw = getData(user_id, date_range)
+def transfer2Content2(keys, user, date_range):
+    data_raw = getData(user.id, date_range)
     attr_raw = getAttr(data_raw)
     content = []
     for key in keys:
-        if key == 'phases_overtime':
-            content.append(data_raw['phases_overtime'])
+        if key == 'id':
+            content.append(user.id)
+        elif key == 'name':
+            content.append(user.name)
+        elif key == 'overtime_sum':
+            content.append(round(data_raw['overtime_sum']/3600))
+        elif key == 'phases_overtime':
+            content.append(len(data_raw['phases_overtime']))
         elif key == 'phases_all':
-            content.append(data_raw['phases_all'])
+            content.append(len(data_raw['phases_all']))
         elif key == 'phases_pass':
-            content.append(data_raw['phases_pass'])
+            content.append(len(data_raw['phases_pass']))
         elif key == 'phases_modify':
-            content.append(data_raw['phases_modify'])
+            content.append(len(data_raw['phases_modify']))
         elif key == 'phases_pending':
-            content.append(data_raw['phases_pending'])
+            content.append(len(data_raw['phases_pending']))
         elif key == 'stages_all':
-            content.append(data_raw['stages_all'])
+            content.append(len(data_raw['stages_all']))
         elif key == 'stages_one_pass':
-            content.append(data_raw['stages_one_pass'])
-        elif key == 'stages_mod_pass_d':
-            content.append(data_raw['stages_mod_pass_d'])
-        elif key == 'stages_no_pass_d':
-            content.append(data_raw['stages_no_pass_d'])
+            content.append(len(data_raw['stages_one_pass_c'])+len(data_raw['stages_one_pass_d']))
+        elif key == 'stages_mod_pass':
+            content.append(len(data_raw['stages_mod_pass_c'])+len(data_raw['stages_mod_pass_d']))
+        elif key == 'stages_no_pass':
+            content.append(len(data_raw['stages_no_pass_c'])+len(data_raw['stages_no_pass_d']))
+        elif key == 'stages_one_pass_c':
+            content.append(len(data_raw['stages_one_pass_c']))
+        elif key == 'stages_mod_pass_c':
+            content.append(len(data_raw['stages_mod_pass_c']))
+        elif key == 'stages_no_pass_c':
+            content.append(len(data_raw['stages_no_pass_c']))
         elif key == 'stages_one_pass_d':
-            content.append(data_raw['stages_one_pass_d'])
+            content.append(len(data_raw['stages_one_pass_d']))
         elif key == 'stages_mod_pass_d':
-            content.append(data_raw['stages_mod_pass_d'])
+            content.append(len(data_raw['stages_mod_pass_d']))
         elif key == 'stages_no_pass_d':
-            content.append(data_raw['stages_no_pass_d'])
+            content.append(len(data_raw['stages_no_pass_d']))
         elif key == 'files_ref':
-            content.append(data_raw['files_ref'])
+            content.append(len(data_raw['files_ref']))
         elif key == 'project_sample':
-            content.append(data_raw['project_sample'])
+            content.append(len(data_raw['project_sample']))
         elif key == 'speed':
             content.append(attr_raw['speed'])
         elif key == 'power':
@@ -352,6 +374,7 @@ def transfer2Content2(keys, user_id, date_range):
 
 USER_DATA_TABLE = reqparse.RequestParser()\
     .add_argument('user_id', location='args', required=True, action='split')\
+    .add_argument('keys', location='args', required=True, action='split')\
     .add_argument('date_range', location='args', action='split')
 
 
@@ -366,7 +389,7 @@ class DownloadUserTableApi(Resource):
 
         if user_list:
             task = exportTableUserData.delay(
-                args['user_id'], args['date_range'])
+                args['user_id'], args['keys'], args['date_range'])
 
             return {'task_id': task.id}, 202
         else:
@@ -440,7 +463,7 @@ def exportTableUserData(self, user_id, keys, date_range):
                 csvfile, dialect='excel', quoting=csv.QUOTE_NONNUMERIC,)
             csvWriter.writerow(transfer2Header2(keys))
             for i, user in enumerate(user_list):
-                csvWriter.writerow(transfer2Content2(keys, user.id, date_range))
+                csvWriter.writerow(transfer2Content2(keys, user, date_range))
                 self.update_state(
                     state='PROGRESS',
                     meta={'current': i+1, 'total': len(user_list)}

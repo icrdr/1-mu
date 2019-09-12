@@ -26,9 +26,9 @@ def getData(user_id, date_range=None):
     stages_all = Stage.query\
         .filter(Stage.phases.any(and_(Phase.upload_date <= end, Phase.upload_date >= start)))\
         .filter(Stage.phases.any(Phase.creator_user_id == user_id)).all()
-    stages_one_pass = []
-    stages_mod_pass = []
-    stages_no_pass = []
+    stages_one_pass_c = []
+    stages_mod_pass_c = []
+    stages_no_pass_c = []
     stages_one_pass_d = []
     stages_mod_pass_d = []
     stages_no_pass_d = []
@@ -38,19 +38,19 @@ def getData(user_id, date_range=None):
             if stage.name == '草图':
                 stages_no_pass_d.append(stage)
             else:
-                stages_no_pass.append(stage)
+                stages_no_pass_c.append(stage)
         else:
             # print('完成的阶段：%s-%s'%(stage.project, stage))
             if len(stage.phases) > 1:
                 if stage.name == '草图':
                     stages_mod_pass_d.append(stage)
                 else:
-                    stages_mod_pass.append(stage)
+                    stages_mod_pass_c.append(stage)
             else:
                 if stage.name == '草图':
                     stages_one_pass_d.append(stage)
                 else:
-                    stages_one_pass.append(stage)
+                    stages_one_pass_c.append(stage)
 
     phases_all = Phase.query\
         .filter(and_(Phase.upload_date <= end, Phase.upload_date >= start))\
@@ -95,9 +95,9 @@ def getData(user_id, date_range=None):
         'phases_modify': phases_modify,
         'phases_pending': phases_pending,
         'stages_all': stages_all,
-        'stages_one_pass': stages_one_pass,
-        'stages_mod_pass': stages_mod_pass,
-        'stages_no_pass': stages_no_pass,
+        'stages_one_pass_c': stages_one_pass_c,
+        'stages_mod_pass_c': stages_mod_pass_c,
+        'stages_no_pass_c': stages_no_pass_c,
         'stages_one_pass_d': stages_one_pass_d,
         'stages_mod_pass_d': stages_mod_pass_d,
         'stages_no_pass_d': stages_no_pass_d,
@@ -107,15 +107,15 @@ def getData(user_id, date_range=None):
 
 
 def getAttr(data_raw):
-    stages_one_pass = data_raw['stages_one_pass']
-    stages_mod_pass = data_raw['stages_mod_pass']
-    stages = stages_one_pass + stages_mod_pass
+    stages_one_pass_c = data_raw['stages_one_pass_c']
+    stages_mod_pass_c = data_raw['stages_mod_pass_c']
+    stages_c = stages_one_pass_c + stages_mod_pass_c
     phases_count = 0
-    for stage in stages:
+    for stage in stages_c:
         phases_count += len(stage.phases)
 
-    if stages:
-        power = (1-phases_count/(len(stages)*5))
+    if stages_c:
+        power = (1-phases_count/(len(stages_c)*5))
         power = clip(power, 0, 4/5)
         power = interp(power, [0, 4/5], [1, 5])
     else:
@@ -181,7 +181,7 @@ def getAttr(data_raw):
         else:
             files_s += 5
 
-    contribution_s = (len(stages_d)+len(stages))*10 + files_s +len(project_sample)*20
+    contribution_s = (len(stages_d)+len(stages_c))*10 + files_s +len(project_sample)*20
     if delta_days >= 1 and contribution_s > 0:
         contribution = contribution_s/delta_days/10
         contribution = clip(contribution, 0, 2)
@@ -189,7 +189,7 @@ def getAttr(data_raw):
     else:
         contribution = 0
     
-    score = len(stages_d)*10+len(stages)*20 + files_s +len(project_sample)*30-overtime_sum/86400
+    score = len(stages_d)*10+len(stages_c)*20 + files_s +len(project_sample)*30-overtime_sum/86400
     score = max(score,0)
     return {
         'power': round(power, 1),
