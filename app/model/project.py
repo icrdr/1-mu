@@ -184,15 +184,21 @@ class Project(db.Model):
                 send_message(new_log, admin)
         send_message(new_log, self.client)
 
-    def editFeedback(self, operator_id, client_id, feedback_content):
+    def editFeedback(self, operator_id, client_id, feedback_content, files):
         """Set the status to 'modify'."""
         # current phase update
         current_phase = self.current_phase()
         current_phase.client_feedback = feedback_content
         current_phase.client_user_id = client_id
+        if files:
+            current_phase.files = []
+            for file_id in files:
+                file = File.query.get(file_id)
+                current_phase.files.append(file)
+
         db.session.commit()
 
-    def doFeedback(self, operator_id, client_id, feedback_content, is_pass):
+    def doFeedback(self, operator_id, client_id, feedback_content, files, is_pass):
         """Set the status to 'modify'."""
         if self.discard or self.pause:
             raise Exception("Discard or paused project can't set to modify!")
@@ -202,6 +208,14 @@ class Project(db.Model):
         current_phase.client_feedback = feedback_content
         current_phase.client_user_id = client_id
         current_phase.feedback_date = datetime.utcnow()
+        
+        if files:
+            print(files)
+            current_phase.files = []
+            for file_id in files:
+                print(file_id)
+                file = File.query.get(file_id)
+                current_phase.files.append(file)
 
         if is_pass:
             # if current stage is not the last one, then go into next stage

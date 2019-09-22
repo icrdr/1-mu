@@ -67,8 +67,10 @@ M_PHASE = api.model('phase', {
     'client': fields.Nested(M_UPLOADER),
     'client_feedback': fields.String,
     'upload_files': fields.List(fields.Nested(M_FILE)),
-    'pauses': fields.List(fields.Nested(M_PAUSE))
+    'pauses': fields.List(fields.Nested(M_PAUSE)),
+    'files': fields.List(fields.Nested(M_FILE)),
 })
+
 M_STAGE_MIN = api.model('stage_min', {
     'id': fields.Integer,
     'name': fields.String,
@@ -111,6 +113,7 @@ M_PROJECT = api.model('project', {
     'stages': fields.List(fields.Nested(M_STAGE)),
     'tags': fields.List(fields.Nested(M_TAG)),
     'logs': fields.List(fields.Nested(M_PROJECT_LOG)),
+    'files': fields.List(fields.Nested(M_FILE)),
     'delay': fields.Boolean,
     'pause': fields.Boolean,
 })
@@ -488,7 +491,8 @@ FEEDBACK_PROJECT = reqparse.RequestParser()\
     .add_argument('feedback', required=True)\
     .add_argument('is_pass', type=int, default=0)\
     .add_argument('confirm', type=int, default=0)\
-    .add_argument('is_pause', type=int, default=0)
+    .add_argument('is_pause', type=int, default=0)\
+    .add_argument('files', type=int, action='append')
 
 
 @N_PROJECT.route('/<int:project_id>/feedback')
@@ -517,6 +521,7 @@ class PorjectModifyApi(Resource):
                     g.current_user.id,
                     g.current_user.id,
                     args['feedback'],
+                    args['files'],
                     args['is_pass']
                 )
                 if args['is_pause'] and project.status != 'finish':
@@ -528,6 +533,7 @@ class PorjectModifyApi(Resource):
                     g.current_user.id,
                     g.current_user.id,
                     args['feedback'],
+                    args['files'],
                 )
             return project, 201
         except Exception as error:
