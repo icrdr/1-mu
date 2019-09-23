@@ -41,14 +41,20 @@ class DownloadApi(Resource):
         files_list = File.query.filter(File.id.in_(args['file_id'])).all()
         if files_list:
             try:
+                phase = files_list[0].phases_as_upload[0]
+                stage = phase.stage
+                project = phase.project
                 zip_path = os.path.join(app.config['DOWNLOAD_FOLDER'], 'temp')
                 if not os.path.exists(zip_path):
                     os.makedirs(zip_path)
-                zip_file = os.path.join(zip_path, str(shortuuid.uuid())+'.zip')
+                zip_file_name = '{}-{}-{}.zip'.format(project.title, stage.name, str(shortuuid.uuid()))
+                zip_file = os.path.join(zip_path, zip_file_name)
                 zipf = zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED)
-
-                for file in files_list:
-                    filename = file.name+'.'+file.format
+                
+                for i, file in enumerate(files_list):
+                    index_number = '{:03}'.format(i)
+                    filename = '{}-{}.{}.{}'.format(
+                        project.title, stage.name, index_number, file.format)
                     zipf.write(os.path.join(
                         app.config['UPLOAD_FOLDER'], file.url), filename)
 
