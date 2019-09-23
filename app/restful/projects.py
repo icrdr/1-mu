@@ -280,11 +280,11 @@ class PorjectsApi(Resource):
                 query = query.order_by(Project.deadline_date.desc())
         elif args['order_by'] == 'status':
             if args['order'] == 'asc':
-                query = query.order_by(Project.status.asc(), Project.pause.desc(
+                query = query.order_by(Project.status.asc(), Project.pause.asc(
                 ), Project.delay.desc(), Project.id.desc())
             else:
                 query = query.order_by(
-                    Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
+                    Project.status.desc(), Project.pause.asc(), Project.delay.desc(), Project.id.desc())
 
         elif args['order_by'] == 'progress':
             if args['order'] == 'asc':
@@ -297,18 +297,18 @@ class PorjectsApi(Resource):
         elif args['order_by'] == 'creator_id':
             if args['order'] == 'asc':
                 query = query.join(Project.creator).order_by(
-                    User.id.asc(), Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
+                    User.id.asc(), Project.status.desc(), Project.pause.asc(), Project.delay.desc(), Project.id.desc())
             else:
                 query = query.join(Project.creator).order_by(
-                    User.id.desc(), Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
+                    User.id.desc(), Project.status.desc(), Project.pause.asc(), Project.delay.desc(), Project.id.desc())
 
         elif args['order_by'] == 'client_id':
             if args['order'] == 'asc':
                 query = query.join(Project.client).order_by(
-                    User.id.asc(), Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
+                    User.id.asc(), Project.status.desc(), Project.pause.asc(), Project.delay.desc(), Project.id.desc())
             else:
                 query = query.join(Project.client).order_by(
-                    User.id.desc(), Project.status.desc(), Project.pause.desc(), Project.delay.desc(), Project.id.desc())
+                    User.id.desc(), Project.status.desc(), Project.pause.asc(), Project.delay.desc(), Project.id.desc())
 
         total = len(query.all())
         projects = query.limit(args['pre_page']).offset(
