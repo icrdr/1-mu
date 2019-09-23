@@ -134,18 +134,24 @@ class Project(db.Model):
         addDelayCounter(self.id, deadline)
         db.session.commit()
 
-    def editUpload(self, operator_id, creator_id, upload, upload_files):
+    def editUpload(self, operator_id, creator_id, upload, files, upload_files):
         current_phase = self.current_phase()
         current_phase.creator_user_id = creator_id
         current_phase.creator_upload = upload
         current_phase.upload_files = []
+        if files:
+            current_phase.files = []
+            for file_id in files:
+                file = File.query.get(file_id)
+                current_phase.files.append(file)
+
         for upload_file in upload_files:
             current_phase.upload_files.append(
                 File.query.get(upload_file['id']))
 
         db.session.commit()
 
-    def doUpload(self, operator_id, creator_id, upload_content, upload_files):
+    def doUpload(self, operator_id, creator_id, upload_content, files, upload_files):
         """upload current stage."""
         if self.discard or self.pause:
             raise Exception("Discard or paused project can't upload!")
@@ -154,6 +160,12 @@ class Project(db.Model):
         current_phase.creator_user_id = creator_id
         current_phase.creator_upload = upload_content
         current_phase.upload_files = []
+        if files:
+            current_phase.files = []
+            for file_id in files:
+                file = File.query.get(file_id)
+                current_phase.files.append(file)
+
         for upload_file in upload_files:
             current_phase.upload_files.append(
                 File.query.get(upload_file['id']))

@@ -440,7 +440,8 @@ class PorjectStartApi(Resource):
 UPLOAD_PROJECT = reqparse.RequestParser()\
     .add_argument('upload', required=True)\
     .add_argument('upload_files', type=list, location='json', required=True)\
-    .add_argument('confirm', type=int, default=0)
+    .add_argument('confirm', type=int, default=0)\
+    .add_argument('files', type=int, action='append')
 
 
 @N_PROJECT.route('/<int:project_id>/upload')
@@ -472,6 +473,7 @@ class PorjectUploadApi(Resource):
                     g.current_user.id,
                     g.current_user.id,
                     args['upload'],
+                    args['files'],
                     args['upload_files'],
                 )
             else:
@@ -479,6 +481,7 @@ class PorjectUploadApi(Resource):
                     g.current_user.id,
                     g.current_user.id,
                     args['upload'],
+                    args['files'],
                     args['upload_files'],
                 )
             return project, 201
