@@ -197,8 +197,12 @@ class PorjectsApi(Resource):
         if args['status']:
             if 'pause' in args['status']:
                 query = query.filter(Project.pause == True)
+            else:
+                query = query.filter(Project.pause == False)
             if 'delay' in args['status']:
                 query = query.filter(Project.delay == True)
+            else:
+                query = query.filter(Project.delay == False)
             query = query.filter(Project.status.in_(args['status']))
 
         if args['start_date']:
