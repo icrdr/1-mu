@@ -334,7 +334,7 @@ G_GROUP = reqparse.RequestParser()\
     .add_argument('order', location='args', default='asc',choices=['asc', 'desc'])\
     .add_argument('order_by', location='args', default='id',choices=['id', 'name', 'reg_date'])\
     .add_argument('page', location='args', type=int, default=1)\
-    .add_argument('pre_page', location='args', type=int, default=10)
+    .add_argument('pre_page', location='args', type=int, default=20)
 
 P_GROUP = reqparse.RequestParser()\
     .add_argument('name', required=True)\
