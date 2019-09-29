@@ -190,10 +190,10 @@ class Project(db.Model):
         db.session.add(new_log)
 
         db.session.commit()
-        admins = User.query.filter(User.role_id==1).all()
-        for admin in admins:
-            if self.client_user_id != admin.id:
-                send_message(new_log, admin)
+        editors = User.query.filter(User.role_id==2).all()
+        for editor in editors:
+            if self.client_user_id != editor.id:
+                send_message(new_log, editor)
         send_message(new_log, self.client)
 
     def editFeedback(self, operator_id, client_id, feedback_content, files):
