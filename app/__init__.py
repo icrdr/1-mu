@@ -90,6 +90,15 @@ def fixStage():
     db.session.commit()
 
 @app.cli.command()
+def fixProject():
+    projects = model.Project.query.all()
+    for project in projects:
+        if project.id>9825:
+            print(project.id)
+            project.doDelete()
+    db.session.commit()
+
+@app.cli.command()
 def fixbool2():
     files = model.File.query.all()
     for file in files:
