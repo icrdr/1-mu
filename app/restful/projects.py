@@ -147,7 +147,7 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('client_id', location='args', action='split')\
     .add_argument('title', location='args')\
     .add_argument('search', location='args')\
-    .add_argument('tags', location='args')\
+    .add_argument('tags', location='args', action='split')\
     .add_argument('discard', location='args', type=int, default=0)\
     .add_argument('start_date', location='args', action='split')\
     .add_argument('finish_date', location='args', action='split')\
@@ -240,7 +240,7 @@ class PorjectsApi(Resource):
 
         if args['tags']:
             query = query.join(Project.tags).filter(
-                Tag.name.contains(args['tags']))
+                Tag.name.in_(args['tags']))
 
         if args['include']:
             if args['exclude']:
