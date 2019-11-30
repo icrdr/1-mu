@@ -2,6 +2,7 @@ from flask import Flask, json
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
+from flask_socketio import SocketIO, send
 from celery import Celery
 from flask_migrate import Migrate, init as db_init, migrate as db_migrate, upgrade as db_upgrade
 from config import config
@@ -38,7 +39,6 @@ api = Api(app, doc='/api/doc/', version='1.0',
 CORS(app)
 
 from . import view, restful, model
-from .utility import word2List
 
 @app.cli.command()
 def update():
@@ -61,165 +61,6 @@ def init():
     model.User.create_admin()
     model.Option.init_option()
     db_init()
-
-
-@app.cli.command()
-def dropProject():
-    model.Project.delete_all_project()
-
-        
-@app.cli.command()
-def fixCreator():
-    projects = model.Project.query.all()
-    for project in projects:
-        print(project.id)
-        if project.creator_group:
-            project.creator_user_id = project.creator_group.admins[0].id
-            for phase in project.phases:
-                if phase.creator_user_id:
-                    project.creator_user_id = phase.creator_user_id
-        print(project.creator)
-        db.session.commit()
-
-@app.cli.command()
-def fixStage():
-    phases = model.Phase.query.all()
-    for phase in phases:
-        if not phase.stage_id:
-            db.session.delete(phase)
-    db.session.commit()
-
-@app.cli.command()
-def fixProject():
-    projects = model.Project.query.all()
-    for project in projects:
-        if project.id>9825:
-            print(project.id)
-            project.doDelete()
-    db.session.commit()
-
-@app.cli.command()
-def fixbool2():
-    files = model.File.query.all()
-    for file in files:
-        if not file.public:
-            file.public = False
-    projects = model.Project.query.all()
-    for project in projects:
-        if not project.public:
-            project.public = False
-    db.session.commit()
-
-@app.cli.command()
-def fixbool():
-    projects = model.Project.query.all()
-    for project in projects:
-        if project.status == 'pause' or project.status == 'discard':
-            if project.current_phase():
-                if project.current_phase().feedback_date:
-                    project.status = 'finish'
-                elif project.current_phase().upload_date:
-                    project.status = 'pending'
-                elif project.current_phase().start_date:
-                    if len(project.current_stage().phases) > 1:
-                        project.status = 'modify'
-                    else:
-                        project.status = 'progress'
-                else:
-                    project.status = 'await'
-            else:
-                project.status = 'await'
-                
-            if project.status == 'pause':
-                project.pause = True
-
-            if project.status == 'discard':
-                project.discard = True
-        else:
-            project.discard = False
-            project.pause = False
-
-        if project.status == 'delay':
-            if len(project.current_stage().phases) > 1:
-                project.status = 'modify'
-            else:
-                project.status = 'progress'
-            project.delay = True
-        else:
-            project.delay = False
-        current_phase = project.current_phase()
-        if current_phase:
-            project.deadline_date = current_phase.deadline_date
-        db.session.commit()
-
-@app.cli.command()
-def fixTX():
-    _tag = model.Tag.query.filter_by(name='腾讯医典词条').first()
-    if not _tag:
-        _tag = model.Tag(name='腾讯医典词条')
-        db.session.add(_tag)
-        db.session.commit()
-    
-    projects = model.Project.query.all()
-    for project in projects:
-        print(project.id)
-        isOK = True
-        for tag in project.tags:
-            if tag.name == '样图' or tag.name == '腾讯医典词条':
-                isOK = False
-        if isOK:
-            project.tags.append(_tag)
-            db.session.commit()
-
-@app.cli.command()
-def fixTag():
-    files = model.File.query.all()
-    for file in files:
-        if len(file.tags)>0:
-            print(file.id)
-            new_tags = []
-            for tag in file.tags:
-                taglist = word2List(tag.name)
-                if len(taglist)>1:
-                    for _t in taglist:
-                        _tag = model.Tag.query.filter_by(name=_t).first()
-                        if not _tag:
-                            _tag = model.Tag(name=_t)
-                            db.session.add(_tag)
-                        new_tags.append(_tag)
-                    db.session.delete(tag)
-                else:
-                    new_tags.append(tag)
-            file.tags = []
-            for n_tag in new_tags:
-                file.tags.append(n_tag)
-            db.session.commit()
-
-    projects = model.Project.query.all()
-    for project in projects:
-        if len(project.tags)>0:
-            print(project.id)
-            new_tags = []
-            for tag in project.tags:
-                taglist = word2List(tag.name)
-                if len(taglist)>1:
-                    for _t in taglist:
-                        _tag = model.Tag.query.filter_by(name=_t).first()
-                        if not _tag:
-                            _tag = model.Tag(name=_t)
-                            db.session.add(_tag)
-                        new_tags.append(_tag)
-                    db.session.delete(tag)
-                else:
-                    new_tags.append(tag)
-            project.tags = []
-            for n_tag in new_tags:
-                project.tags.append(n_tag)
-            db.session.commit()
-    none_tag = model.Tag.query.filter_by(name='').first()
-    if none_tag:
-        db.session.delete(none_tag)
-        db.session.commit()
 
 @app.cli.command()
 def doc():
