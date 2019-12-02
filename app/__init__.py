@@ -2,7 +2,6 @@ from flask import Flask, json
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from flask_socketio import SocketIO, send
 from celery import Celery
 from flask_migrate import Migrate, init as db_init, migrate as db_migrate, upgrade as db_upgrade
 from config import config
@@ -11,6 +10,7 @@ import redis
 from pytz import utc
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import timedelta, datetime
+from flask_socketio import SocketIO, emit
 
 
 app = Flask(__name__)
@@ -38,7 +38,10 @@ api = Api(app, doc='/api/doc/', version='1.0',
 # support CORS https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
 CORS(app)
 
-from . import view, restful, model
+# Socket.io
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+from . import view, restful, model, chat
 
 @app.cli.command()
 def update():
@@ -61,6 +64,7 @@ def init():
     model.User.create_admin()
     model.Option.init_option()
     db_init()
+
 
 @app.cli.command()
 def doc():

@@ -3,6 +3,8 @@ import os
 from datetime import datetime
 from dateutil import tz
 import re
+import time
+import hashlib
 
 def buildUrl(path, dir=app.config['UPLOAD_FOLDER']):
     if path:
@@ -58,3 +60,41 @@ def excerptHtml(html,length=20):
 
 def word2List(string):
     return re.findall(r"[\w']+", string)
+
+def md5sum(src):
+    m = hashlib.md5()
+    m.update(src.encode("utf-8"))
+    return m.hexdigest()
+
+def getAuthKey(appName, streamName, key, exp):
+    path = "/%s/%s" % (appName, streamName)
+    rand = "0"
+    uid = "0"
+    sstring = "%s-%s-%s-%s-%s" % (path, exp, rand, uid, key)
+    hashvalue = md5sum(sstring)
+    return "%s-%s-%s-%s" % (exp, rand, uid, hashvalue)
+
+def generatePushUrl():
+    host = app.config['LIVE_PUSH_HOST']
+    appName = app.config['LIVE_APP_NAME']
+    streamName = app.config['LIVE_STEAM_NAME']
+    key = app.config['PUSH_KEY']
+    exp = int(time.time()) + 6 * 3600
+    auth_key = getAuthKey(appName, streamName, key, exp)
+    url = "rtmp://{}/{}".format(host,appName)
+    auth = "{}?auth_key={}".format(streamName,auth_key)
+    return url, auth
+
+def generatePullUrl():
+    host = app.config['LIVE_PULL_HOST']
+    appName = app.config['LIVE_APP_NAME']
+    streamName = app.config['LIVE_STEAM_NAME']
+    key = app.config['PULL_KEY']
+    exp = int(time.time()) + 6 * 3600
+    auth_key = getAuthKey(appName, streamName, key, exp)
+    auth_key_flv = getAuthKey(appName, streamName+'.flv', key, exp)
+    auth_key_hls = getAuthKey(appName, streamName+'.m3u8', key, exp)
+    rtmp_url = "rtmp://{}/{}/{}?auth_key={}".format(host,appName,streamName,auth_key)
+    flv_url = "http://{}/{}/{}.flv?auth_key={}".format(host,appName,streamName,auth_key_flv)
+    hls_url = "http://{}/{}/{}.m3u8?auth_key={}".format(host,appName,streamName,auth_key_hls)
+    return rtmp_url, flv_url, hls_url

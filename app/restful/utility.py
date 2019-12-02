@@ -1,10 +1,11 @@
-from ..model import Stage, Phase, User, File, Project, Tag, Group, ProjectNotice
-from datetime import datetime
+from ..model import Stage, Phase, User, File, Project, Tag, Group, ProjectNotice, LiveRoom
 from sqlalchemy import or_, case, and_
 from .. import api, app, db
 from numpy import interp, clip
 from datetime import datetime, timedelta
 import math
+import time
+import hashlib
 
 
 def getData(user_id, date_range=None):
@@ -154,7 +155,8 @@ def getAttr(data_raw):
                     pd += pause.resume_date - pause.pause_date
             ud_total += ud - pd
             dd_total += dd - pd
-        speed = math.atan(dd_total.total_seconds()*0.8/ud_total.total_seconds())/(math.pi/2)
+        speed = math.atan(dd_total.total_seconds()*0.8 /
+                          ud_total.total_seconds())/(math.pi/2)
         speed = interp(speed, [0, 1], [0, 5])
 
         energy = len(phases_sort)*1.8/delta_time.days
@@ -170,36 +172,38 @@ def getAttr(data_raw):
 
     files_s = 0
     for file in files_ref:
-        if len(file.tags)<4:
+        if len(file.tags) < 4:
             files_s += 1
-        elif len(file.tags)<6:
+        elif len(file.tags) < 6:
             files_s += 3
-        elif len(file.tags)<8:
+        elif len(file.tags) < 8:
             files_s += 5
-        elif len(file.tags)<10:
+        elif len(file.tags) < 10:
             files_s += 6
         else:
             files_s += 7
 
-    contribution_s = (len(stages_d)+len(stages_c))*10 + files_s +len(project_sample)*20
+    contribution_s = (len(stages_d)+len(stages_c))*10 + \
+        files_s + len(project_sample)*20
     if delta_days >= 1 and contribution_s > 0:
         contribution = contribution_s/delta_days/6
         contribution = clip(contribution, 0, 2)
         contribution = interp(contribution, [0, 2], [1, 5])
     else:
         contribution = 0
-    
+
     files_s2 = 0
     for file in files_ref:
-        if len(file.tags)<4:
+        if len(file.tags) < 4:
             files_s2 += 1
-        elif len(file.tags)<7:
+        elif len(file.tags) < 7:
             files_s2 += 2
         else:
             files_s2 += 3
 
-    score = len(stages_d)*10+len(stages_c)*20 + files_s2 +len(project_sample)*30-overtime_sum/86400
-    score = max(score,0)
+    score = len(stages_d)*10+len(stages_c)*20 + files_s2 + \
+        len(project_sample)*30-overtime_sum/86400
+    score = max(score, 0)
     return {
         'power': round(power, 1),
         'speed': round(speed, 1),
@@ -208,6 +212,7 @@ def getAttr(data_raw):
         'contribution': round(contribution, 1),
         'score': round(score),
     }
+
 
 def projectCheck(project_id):
     project = Project.query.get(project_id)
@@ -239,3 +244,10 @@ def projectNoticeCheck(notice_id):
         api.abort(400, "notice is not exist.")
     else:
         return notice
+
+def liveRoomCheck(room_id):
+    room = LiveRoom.query.get(room_id)
+    if not room:
+        api.abort(400, "live room is not exist.")
+    else:
+        return room

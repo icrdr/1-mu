@@ -3,16 +3,19 @@ from flask import g
 from sqlalchemy import or_, case, and_
 from .. import api, app, db
 from ..model import Option, Phase, User, File, Project, Tag, Group
-from ..utility import buildUrl, getAvatar
+from ..utility import buildUrl, getAvatar, generatePushUrl, generatePullUrl
 from .utility import getData, projectCheck, userCheck
 from .decorator import permission_required, admin_required
 import time
-from datetime import datetime
+from datetime import datetime,timedelta
+
 
 N_OPTION = api.namespace('api/options', description='option operations')
 
 UPDATE_OPTION = reqparse.RequestParser()\
     .add_argument('allow_sign_in')\
+
+
 
 @N_OPTION.route('')
 class OptionsApi(Resource):
@@ -22,13 +25,27 @@ class OptionsApi(Resource):
         return {
             'allow_sign_in': allow_sign_in.value,
         }, 200
-    
+
     @permission_required()
     def put(self):
         args = UPDATE_OPTION.parse_args()
         allow_sign_in = Option.query.filter_by(name='allow_sign_in').first()
         allow_sign_in.value = args['allow_sign_in']
         db.session.commit()
+        return {
+            'message': 'ok',
+        }, 200
+
+    def post(self):
+
+        url, auth = generatePushUrl()
+        rtmp_url, flv_url, hls_url = generatePullUrl()
+        print(url)
+        print(auth)
+        print(rtmp_url)
+        print(flv_url)
+        print(hls_url)
+
         return {
             'message': 'ok',
         }, 200
