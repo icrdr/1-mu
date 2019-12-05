@@ -685,7 +685,7 @@ def addDelayCounter(project_id, deadline):
         trigger='date',
         run_date=deadline,
         replace_existing=True,
-        misfire_grace_time=2592000
+        misfire_grace_time=None
     )
     print('%d project addCounter: %s' % (project_id, deadline))
 

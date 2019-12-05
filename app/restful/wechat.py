@@ -1,9 +1,10 @@
 from flask import request, Response
 import hashlib
-from flask_restplus import Resource, reqparse
+from flask_restplus import Resource, reqparse, fields, marshal
 from .. import api, app, db, scheduler, r_db
 from ..model import User, WxUser, Option
 from werkzeug.security import check_password_hash, generate_password_hash
+from ..utility import buildUrl, getAvatar
 import jwt
 import json
 import requests
@@ -15,12 +16,44 @@ from datetime import datetime, timedelta
 
 n_wechat = api.namespace('api/wechat', description='Authorization Operations')
 
-
 g_wx = reqparse.RequestParser()
 g_wx.add_argument('signature', required=True, location='args')
 g_wx.add_argument('timestamp', required=True, location='args')
 g_wx.add_argument('nonce', required=True, location='args')
 g_wx.add_argument('echostr', location='args')
+
+m_wx_user = api.model('user', {
+    'id': fields.Integer,
+    'nickname': fields.String,
+    'sex': fields.String,
+    'headimg_url': fields.String,
+})
+
+M_USER = api.model('user', {
+    'id': fields.Integer,
+    'name': fields.String,
+    'title': fields.String,
+    'sex': fields.String,
+    'email': fields.String,
+    'phone': fields.String,
+    'avatar_url': fields.String(attribute=lambda x: getAvatar(x)),
+    'reg_date': fields.String,
+    'role': fields.String(
+        attribute=lambda x: str(x.role.name)
+    ),
+    'followed_count': fields.Integer(
+        attribute=lambda x: len(x.followed_users)
+    ),
+    'follower_count': fields.Integer(
+        attribute=lambda x: len(x.follower_users)
+    ),
+    'wx_user': fields.Nested(m_wx_user),
+})
+
+M_AUTH = api.model('user_auth', {
+    'user': fields.Nested(M_USER),
+    'token': fields.String,
+})
 
 
 @n_wechat.route('')
@@ -57,7 +90,8 @@ class WxApi(Resource):
             if 'EventKey' in xml_dict:
                 if 'login' in xml_dict['EventKey']:
                     try:
-                        r_db.set(xml_dict['EventKey'], xml_dict['FromUserName'])
+                        r_db.set(xml_dict['EventKey'],
+                                 xml_dict['FromUserName'])
                     except Exception as e:
                         print(e)
 
@@ -120,7 +154,7 @@ class WxAuthApi(Resource):
             "code": args['wxcode']
         }
 
-        try:  
+        try:
             # step 2: get access_token from wechat serves.
             data = requests.get(url, params=params).json()
             if 'access_token' in data:
@@ -129,7 +163,7 @@ class WxAuthApi(Resource):
                     "access_token": data['access_token'],
                     "openid": data['openid'],
                 }
-                try:  
+                try:
                     # step 3: get userinfo with access_token from wechat serves.
                     res = requests.get(url, params=params)
                     res.encoding = 'utf-8'
@@ -313,6 +347,7 @@ def getAccessToken():
         print(e)
         return api.abort(400, "bad connection")
 
+
 def accessUser(data):
     wx_user = WxUser.query.filter_by(unionid=data['unionid']).first()
     # check if the wechat unionid is already registed on our serves
@@ -342,8 +377,10 @@ def accessUser(data):
     token = jwt.encode({'id': wx_user.bind_user_id, 'exp': datetime.utcnow(
     )+timedelta(days=24)}, app.config['SECRET_KEY'])
 
-    return {
-        'token': token.decode('UTF-8'),
-        'wx_info': data
-    }, 200
-    
+    print(wx_user.user)
+    output = {
+        'user': wx_user.user,
+        'token': token.decode('UTF-8')
+    }
+
+    return marshal(output, M_AUTH), 200

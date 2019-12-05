@@ -5,13 +5,16 @@ from dateutil import tz
 import re
 import time
 import hashlib
+import shortuuid
+
 
 def buildUrl(path, dir=app.config['UPLOAD_FOLDER']):
     if path:
         return str(os.path.join(app.config['DOMAIN_URL'], dir + path)).replace('\\', '/')
     else:
         return ''
-    
+
+
 def getAvatar(user):
     try:
         if user.wx_user:
@@ -23,6 +26,7 @@ def getAvatar(user):
     except Exception as e:
         print(e)
 
+
 def UTC2Local(date):
     from_zone = tz.tzutc()
     to_zone = tz.tzlocal()
@@ -32,14 +36,17 @@ def UTC2Local(date):
     # Convert time zone
     local = date.astimezone(to_zone)
     return local
+
+
 def getStageIndex(stage):
     project = stage.parent_project
     index = 0
     if project:
         for i, s in enumerate(project.stages):
             if s.id == stage.id:
-                index =i
+                index = i
     return index
+
 
 def getPhaseIndex(phase):
     stage = phase.parent_stage
@@ -49,22 +56,27 @@ def getPhaseIndex(phase):
     if stage:
         for i, p in enumerate(stage.phases):
             if p.id == phase.id:
-                index =i
+                index = i
     return index
-def excerptHtml(html,length=20):
-    pattern = re.compile(r'<[^>]+>',re.S)
+
+
+def excerptHtml(html, length=20):
+    pattern = re.compile(r'<[^>]+>', re.S)
     result = pattern.sub('', html)
-    if len(result)>20:
+    if len(result) > 20:
         result = result[:length]+'...'
     return result
 
+
 def word2List(string):
     return re.findall(r"[\w']+", string)
+
 
 def md5sum(src):
     m = hashlib.md5()
     m.update(src.encode("utf-8"))
     return m.hexdigest()
+
 
 def getAuthKey(appName, streamName, key, exp):
     path = "/%s/%s" % (appName, streamName)
@@ -74,27 +86,30 @@ def getAuthKey(appName, streamName, key, exp):
     hashvalue = md5sum(sstring)
     return "%s-%s-%s-%s" % (exp, rand, uid, hashvalue)
 
-def generatePushUrl():
+
+def generatePushUrl(streamName):
     host = app.config['LIVE_PUSH_HOST']
     appName = app.config['LIVE_APP_NAME']
-    streamName = app.config['LIVE_STEAM_NAME']
     key = app.config['PUSH_KEY']
     exp = int(time.time()) + 6 * 3600
     auth_key = getAuthKey(appName, streamName, key, exp)
-    url = "rtmp://{}/{}".format(host,appName)
-    auth = "{}?auth_key={}".format(streamName,auth_key)
+    url = "rtmp://{}/{}".format(host, appName)
+    auth = "{}?auth_key={}".format(streamName, auth_key)
     return url, auth
 
-def generatePullUrl():
+
+def generatePullUrl(streamName):
     host = app.config['LIVE_PULL_HOST']
     appName = app.config['LIVE_APP_NAME']
-    streamName = app.config['LIVE_STEAM_NAME']
     key = app.config['PULL_KEY']
     exp = int(time.time()) + 6 * 3600
     auth_key = getAuthKey(appName, streamName, key, exp)
     auth_key_flv = getAuthKey(appName, streamName+'.flv', key, exp)
     auth_key_hls = getAuthKey(appName, streamName+'.m3u8', key, exp)
-    rtmp_url = "rtmp://{}/{}/{}?auth_key={}".format(host,appName,streamName,auth_key)
-    flv_url = "http://{}/{}/{}.flv?auth_key={}".format(host,appName,streamName,auth_key_flv)
-    hls_url = "http://{}/{}/{}.m3u8?auth_key={}".format(host,appName,streamName,auth_key_hls)
+    rtmp_url = "rtmp://{}/{}/{}?auth_key={}".format(
+        host, appName, streamName, auth_key)
+    flv_url = "http://{}/{}/{}.flv?auth_key={}".format(
+        host, appName, streamName, auth_key_flv)
+    hls_url = "http://{}/{}/{}.m3u8?auth_key={}".format(
+        host, appName, streamName, auth_key_hls)
     return rtmp_url, flv_url, hls_url

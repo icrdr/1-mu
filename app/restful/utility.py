@@ -1,4 +1,4 @@
-from ..model import Stage, Phase, User, File, Project, Tag, Group, ProjectNotice, LiveRoom
+from ..model import Stage, Phase, User, File, Project, Tag, Group, ProjectNotice, Course
 from sqlalchemy import or_, case, and_
 from .. import api, app, db
 from numpy import interp, clip
@@ -245,9 +245,9 @@ def projectNoticeCheck(notice_id):
     else:
         return notice
 
-def liveRoomCheck(room_id):
-    room = LiveRoom.query.get(room_id)
-    if not room:
-        api.abort(400, "live room is not exist.")
+def CourseCheck(course_id):
+    course = Course.query.get(course_id)
+    if not course:
+        api.abort(400, "course is not exist.")
     else:
-        return room
+        return course
