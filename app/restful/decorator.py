@@ -9,7 +9,7 @@ PERMISSIONS = app.config['PERMISSIONS']
 g_user = reqparse.RequestParser()
 # g_user.add_argument('Authorization', required=True, location='headers',
 #                     help="Basic authorization or token.")
-g_user.add_argument('token2',location='cookies',
+g_user.add_argument('token',location='cookies',
                     help="Basic authorization or token.")
 
 def permission_required(permission=None):

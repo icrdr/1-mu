@@ -182,7 +182,6 @@ def check_stream(streamName, live_room_id):
     response = client.do_action_with_exception(request)
     res_json = json.loads(response)
     # print(res_json)
-    print('check')
     if 'OnlineInfo' in res_json:
         online_info = res_json['OnlineInfo']
         if "LiveStreamOnlineInfo" in online_info:
