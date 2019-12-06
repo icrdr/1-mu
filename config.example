@@ -70,6 +70,17 @@ class Config:
         'DEFAULT': 'Visitor'
     }
 
+    #LIVEr
+    LIVE_PUSH_HOST = ""
+    LIVE_PULL_HOST = ""
+    LIVE_APP_NAME = ''
+    PUSH_KEY = ''
+    PULL_KEY = ''
+
+    #aliyun
+    ALIYUN_KEY = ''
+    ALIYUN_SECRET = ''
+
 class DevelopmentConfig(Config):
     pass
 
