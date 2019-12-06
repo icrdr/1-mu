@@ -34,54 +34,54 @@ import json
 # )
 
 
-# class Course(db.Model):
-#     """Course Model"""
-#     __tablename__ = 'courses'
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(64))
-#     excerpt = db.Column(db.String(512))
-#     intro = db.Column(db.Text)
-#     reg_date = db.Column(db.DateTime, default=datetime.utcnow)
-#     tutors = db.relationship('User', secondary=COURSE_TUTOR, lazy='subquery',
-#                              backref=db.backref('courses_as_tutor', lazy=True))
-#     members = db.relationship('User', secondary=COURSE_MEMBER, lazy='subquery',
-#                               backref=db.backref('courses_as_member', lazy=True))
-#     live_room_id = db.Column(db.Integer, db.ForeignKey('live_rooms.id'))
-#     live_room = db.relationship('LiveRoom', foreign_keys=live_room_id, backref=db.backref(
-#         'live_room', lazy=True))
+class Course(db.Model):
+    """Course Model"""
+    __tablename__ = 'courses'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64))
+    excerpt = db.Column(db.String(512))
+    intro = db.Column(db.Text)
+    reg_date = db.Column(db.DateTime, default=datetime.utcnow)
+    # tutors = db.relationship('User', secondary=COURSE_TUTOR, lazy='subquery',
+    #                          backref=db.backref('courses_as_tutor', lazy=True))
+    # members = db.relationship('User', secondary=COURSE_MEMBER, lazy='subquery',
+    #                           backref=db.backref('courses_as_member', lazy=True))
+    live_room_id = db.Column(db.Integer, db.ForeignKey('live_rooms.id'))
+    live_room = db.relationship('LiveRoom', foreign_keys=live_room_id, backref=db.backref(
+        'live_room', lazy=True))
 
-#     public = db.Column(db.Boolean, nullable=False, default=True)
+    public = db.Column(db.Boolean, nullable=False, default=True)
 
-#     def delete(self):
-#         """Delete this Course."""
-#         db.session.delete(self)
-#         db.session.commit()
+    def delete(self):
+        """Delete this Course."""
+        db.session.delete(self)
+        db.session.commit()
 
-#     @staticmethod
-#     def createCourse(name='a course', intro='<p>a course</p>', tutor_id=1):
-#         """Create new a course."""
-#         tutor = User.query.get(tutor_id)
-#         if not tutor:
-#             raise Exception("User is not exist!")
+    @staticmethod
+    def createCourse(name='a course', intro='<p>a course</p>', tutor_id=1):
+        """Create new a course."""
+        tutor = User.query.get(tutor_id)
+        if not tutor:
+            raise Exception("User is not exist!")
 
-#         new_course = Course(
-#             name=name,
-#             intro=intro,
-#         )
-#         db.session.add(new_course)
+        new_course = Course(
+            name=name,
+            intro=intro,
+        )
+        db.session.add(new_course)
 
-#         new_live_room = LiveRoom()
-#         db.session.add(new_live_room)
+        new_live_room = LiveRoom()
+        db.session.add(new_live_room)
 
-#         new_course.live_room = new_live_room
-#         new_course.tutors.append(tutor)
-#         new_course.members.append(tutor)
+        new_course.live_room = new_live_room
+        new_course.tutors.append(tutor)
+        new_course.members.append(tutor)
 
-#         db.session.commit()
-#         return new_course
+        db.session.commit()
+        return new_course
 
-#     def __repr__(self):
-#         return '<Course id %s>' % self.id
+    def __repr__(self):
+        return '<Course id %s>' % self.id
 
 
 class LiveRoom(db.Model):
