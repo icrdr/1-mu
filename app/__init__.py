@@ -45,9 +45,6 @@ from . import view, restful, model, chat
 
 @app.cli.command()
 def update():
-    # migrate database to latest revision
-    db_migrate()
-    db_upgrade()
 
     # update user roles
     model.Role.insert_roles()
