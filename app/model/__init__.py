@@ -6,7 +6,7 @@ from .file import File, Preview
 
 from .user import User, Role, Group, WxUser
 
-from .course import LiveRoom, LiveLog
+from .course import LiveRoom
 
 from .misc import Option
 

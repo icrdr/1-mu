@@ -150,23 +150,23 @@ class LiveRoom(db.Model):
         return '<LiveRoom id %s>' % self.id
 
 
-class LiveLog(db.Model):
-    """LiveLog Model"""
-    __tablename__ = 'live_logs'
-    id = db.Column(db.Integer, primary_key=True)
-    start_date = db.Column(db.DateTime)
-    end_date = db.Column(db.DateTime)
+# class LiveLog(db.Model):
+#     """LiveLog Model"""
+#     __tablename__ = 'live_logs'
+#     id = db.Column(db.Integer, primary_key=True)
+#     start_date = db.Column(db.DateTime)
+#     end_date = db.Column(db.DateTime)
 
-    host_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-    host = db.relationship('User', foreign_keys=host_id, backref=db.backref(
-        'live_log_as_host', lazy=True))
+#     host_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+#     host = db.relationship('User', foreign_keys=host_id, backref=db.backref(
+#         'live_log_as_host', lazy=True))
 
-    live_room_id = db.Column(db.Integer, db.ForeignKey('live_rooms.id'))
-    live_room = db.relationship('LiveRoom', foreign_keys=live_room_id, backref=db.backref(
-        'live_logs', lazy=True))
+#     live_room_id = db.Column(db.Integer, db.ForeignKey('live_rooms.id'))
+#     live_room = db.relationship('LiveRoom', foreign_keys=live_room_id, backref=db.backref(
+#         'live_logs', lazy=True))
 
-    def __repr__(self):
-        return '<LiveLog id %s>' % self.id
+#     def __repr__(self):
+#         return '<LiveLog id %s>' % self.id
 
 
 def check_stream(streamName, live_room_id):
