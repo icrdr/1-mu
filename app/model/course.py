@@ -9,79 +9,79 @@ from aliyunsdkcore.acs_exception.exceptions import ServerException
 from aliyunsdklive.request.v20161101.DescribeLiveStreamsOnlineListRequest import DescribeLiveStreamsOnlineListRequest
 import json
 
-# COURSE_TUTOR = db.Table(
-#     'course_tutors',
-#     db.Column('user_id', db.Integer,
-#               db.ForeignKey('users.id')),
-#     db.Column('course_id', db.Integer,
-#               db.ForeignKey('courses.id')),
-# )
+COURSE_TUTOR = db.Table(
+    'course_tutors',
+    db.Column('user_id', db.Integer,
+              db.ForeignKey('users.id')),
+    db.Column('course_id', db.Integer,
+              db.ForeignKey('courses.id')),
+)
 
-# COURSE_MEMBER = db.Table(
-#     'course_members',
-#     db.Column('user_id', db.Integer,
-#               db.ForeignKey('users.id')),
-#     db.Column('course_id', db.Integer,
-#               db.ForeignKey('courses.id')),
-# )
+COURSE_MEMBER = db.Table(
+    'course_members',
+    db.Column('user_id', db.Integer,
+              db.ForeignKey('users.id')),
+    db.Column('course_id', db.Integer,
+              db.ForeignKey('courses.id')),
+)
 
-# LIVEROOM_VIEWER = db.Table(
-#     'live_room_viewers',
-#     db.Column('user_id', db.Integer,
-#               db.ForeignKey('users.id')),
-#     db.Column('live_room_id', db.Integer,
-#               db.ForeignKey('live_rooms.id')),
-# )
+LIVEROOM_VIEWER = db.Table(
+    'live_room_viewers',
+    db.Column('user_id', db.Integer,
+              db.ForeignKey('users.id')),
+    db.Column('live_room_id', db.Integer,
+              db.ForeignKey('live_rooms.id')),
+)
 
 
-# class Course(db.Model):
-#     """Course Model"""
-#     __tablename__ = 'courses'
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(64))
-#     excerpt = db.Column(db.String(512))
-#     intro = db.Column(db.Text)
-#     reg_date = db.Column(db.DateTime, default=datetime.utcnow)
-#     # tutors = db.relationship('User', secondary=COURSE_TUTOR, lazy='subquery',
-#     #                          backref=db.backref('courses_as_tutor', lazy=True))
-#     # members = db.relationship('User', secondary=COURSE_MEMBER, lazy='subquery',
-#     #                           backref=db.backref('courses_as_member', lazy=True))
-#     live_room_id = db.Column(db.Integer, db.ForeignKey('live_rooms.id'))
-#     live_room = db.relationship('LiveRoom', foreign_keys=live_room_id, backref=db.backref(
-#         'live_room', lazy=True))
+class Course(db.Model):
+    """Course Model"""
+    __tablename__ = 'courses'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(64))
+    excerpt = db.Column(db.String(512))
+    intro = db.Column(db.Text)
+    reg_date = db.Column(db.DateTime, default=datetime.utcnow)
+    tutors = db.relationship('User', secondary=COURSE_TUTOR, lazy='subquery',
+                             backref=db.backref('courses_as_tutor', lazy=True))
+    members = db.relationship('User', secondary=COURSE_MEMBER, lazy='subquery',
+                              backref=db.backref('courses_as_member', lazy=True))
+    live_room_id = db.Column(db.Integer, db.ForeignKey('live_rooms.id'))
+    live_room = db.relationship('LiveRoom', foreign_keys=live_room_id, backref=db.backref(
+        'live_room', lazy=True))
 
-#     public = db.Column(db.Boolean, nullable=False, default=True)
+    public = db.Column(db.Boolean, nullable=False, default=True)
 
-#     def delete(self):
-#         """Delete this Course."""
-#         db.session.delete(self)
-#         db.session.commit()
+    def delete(self):
+        """Delete this Course."""
+        db.session.delete(self)
+        db.session.commit()
 
-#     @staticmethod
-#     def createCourse(name='a course', intro='<p>a course</p>', tutor_id=1):
-#         """Create new a course."""
-#         tutor = User.query.get(tutor_id)
-#         if not tutor:
-#             raise Exception("User is not exist!")
+    @staticmethod
+    def createCourse(name='a course', intro='<p>a course</p>', tutor_id=1):
+        """Create new a course."""
+        tutor = User.query.get(tutor_id)
+        if not tutor:
+            raise Exception("User is not exist!")
 
-#         new_course = Course(
-#             name=name,
-#             intro=intro,
-#         )
-#         db.session.add(new_course)
+        new_course = Course(
+            name=name,
+            intro=intro,
+        )
+        db.session.add(new_course)
 
-#         new_live_room = LiveRoom()
-#         db.session.add(new_live_room)
+        new_live_room = LiveRoom()
+        db.session.add(new_live_room)
 
-#         new_course.live_room = new_live_room
-#         new_course.tutors.append(tutor)
-#         new_course.members.append(tutor)
+        new_course.live_room = new_live_room
+        new_course.tutors.append(tutor)
+        new_course.members.append(tutor)
 
-#         db.session.commit()
-#         return new_course
+        db.session.commit()
+        return new_course
 
-#     def __repr__(self):
-#         return '<Course id %s>' % self.id
+    def __repr__(self):
+        return '<Course id %s>' % self.id
 
 
 class LiveRoom(db.Model):
@@ -99,8 +99,8 @@ class LiveRoom(db.Model):
     current_host_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     current_host = db.relationship('User', foreign_keys=current_host_id, backref=db.backref(
         'live_rooms_as_current_host', lazy=True))
-    # current_viewers = db.relationship('User', secondary=LIVEROOM_VIEWER,
-    #                                   lazy='subquery', backref=db.backref('live_rooms_as_viewer', lazy=True))
+    current_viewers = db.relationship('User', secondary=LIVEROOM_VIEWER,
+                                      lazy='subquery', backref=db.backref('live_rooms_as_viewer', lazy=True))
 
     def doReady(self, host_id):
         host = User.query.get(host_id)
@@ -150,23 +150,23 @@ class LiveRoom(db.Model):
         return '<LiveRoom id %s>' % self.id
 
 
-# class LiveLog(db.Model):
-#     """LiveLog Model"""
-#     __tablename__ = 'live_logs'
-#     id = db.Column(db.Integer, primary_key=True)
-#     start_date = db.Column(db.DateTime)
-#     end_date = db.Column(db.DateTime)
+class LiveLog(db.Model):
+    """LiveLog Model"""
+    __tablename__ = 'live_logs'
+    id = db.Column(db.Integer, primary_key=True)
+    start_date = db.Column(db.DateTime)
+    end_date = db.Column(db.DateTime)
 
-#     host_id = db.Column(db.Integer, db.ForeignKey('users.id'))
-#     host = db.relationship('User', foreign_keys=host_id, backref=db.backref(
-#         'live_log_as_host', lazy=True))
+    host_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    host = db.relationship('User', foreign_keys=host_id, backref=db.backref(
+        'live_log_as_host', lazy=True))
 
-#     live_room_id = db.Column(db.Integer, db.ForeignKey('live_rooms.id'))
-#     live_room = db.relationship('LiveRoom', foreign_keys=live_room_id, backref=db.backref(
-#         'live_logs', lazy=True))
+    live_room_id = db.Column(db.Integer, db.ForeignKey('live_rooms.id'))
+    live_room = db.relationship('LiveRoom', foreign_keys=live_room_id, backref=db.backref(
+        'live_logs', lazy=True))
 
-#     def __repr__(self):
-#         return '<LiveLog id %s>' % self.id
+    def __repr__(self):
+        return '<LiveLog id %s>' % self.id
 
 
 def check_stream(streamName, live_room_id):
