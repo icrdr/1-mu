@@ -9,29 +9,29 @@ from aliyunsdkcore.acs_exception.exceptions import ServerException
 from aliyunsdklive.request.v20161101.DescribeLiveStreamsOnlineListRequest import DescribeLiveStreamsOnlineListRequest
 import json
 
-# COURSE_TUTOR = db.Table(
-#     'course_tutors',
-#     db.Column('user_id', db.Integer,
-#               db.ForeignKey('users.id')),
-#     db.Column('course_id', db.Integer,
-#               db.ForeignKey('courses.id')),
-# )
+COURSE_TUTOR = db.Table(
+    'course_tutors',
+    db.Column('user_id', db.Integer,
+              db.ForeignKey('users.id')),
+    db.Column('course_id', db.Integer,
+              db.ForeignKey('courses.id')),
+)
 
-# COURSE_MEMBER = db.Table(
-#     'course_members',
-#     db.Column('user_id', db.Integer,
-#               db.ForeignKey('users.id')),
-#     db.Column('course_id', db.Integer,
-#               db.ForeignKey('courses.id')),
-# )
+COURSE_MEMBER = db.Table(
+    'course_members',
+    db.Column('user_id', db.Integer,
+              db.ForeignKey('users.id')),
+    db.Column('course_id', db.Integer,
+              db.ForeignKey('courses.id')),
+)
 
-# LIVEROOM_VIEWER = db.Table(
-#     'live_room_viewers',
-#     db.Column('user_id', db.Integer,
-#               db.ForeignKey('users.id')),
-#     db.Column('live_room_id', db.Integer,
-#               db.ForeignKey('live_rooms.id')),
-# )
+LIVEROOM_VIEWER = db.Table(
+    'live_room_viewers',
+    db.Column('user_id', db.Integer,
+              db.ForeignKey('users.id')),
+    db.Column('live_room_id', db.Integer,
+              db.ForeignKey('live_rooms.id')),
+)
 
 
 class Course(db.Model):
@@ -42,10 +42,10 @@ class Course(db.Model):
     excerpt = db.Column(db.String(512))
     intro = db.Column(db.Text)
     reg_date = db.Column(db.DateTime, default=datetime.utcnow)
-    # tutors = db.relationship('User', secondary=COURSE_TUTOR, lazy='subquery',
-    #                          backref=db.backref('courses_as_tutor', lazy=True))
-    # members = db.relationship('User', secondary=COURSE_MEMBER, lazy='subquery',
-    #                           backref=db.backref('courses_as_member', lazy=True))
+    tutors = db.relationship('User', secondary=COURSE_TUTOR, lazy='subquery',
+                             backref=db.backref('courses_as_tutor', lazy=True))
+    members = db.relationship('User', secondary=COURSE_MEMBER, lazy='subquery',
+                              backref=db.backref('courses_as_member', lazy=True))
     live_room_id = db.Column(db.Integer, db.ForeignKey('live_rooms.id'))
     live_room = db.relationship('LiveRoom', foreign_keys=live_room_id, backref=db.backref(
         'live_room', lazy=True))
@@ -99,8 +99,8 @@ class LiveRoom(db.Model):
     current_host_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     current_host = db.relationship('User', foreign_keys=current_host_id, backref=db.backref(
         'live_rooms_as_current_host', lazy=True))
-    # current_viewers = db.relationship('User', secondary=LIVEROOM_VIEWER,
-    #                                   lazy='subquery', backref=db.backref('live_rooms_as_viewer', lazy=True))
+    current_viewers = db.relationship('User', secondary=LIVEROOM_VIEWER,
+                                      lazy='subquery', backref=db.backref('live_rooms_as_viewer', lazy=True))
 
     def doReady(self, host_id):
         host = User.query.get(host_id)
