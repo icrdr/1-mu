@@ -186,10 +186,10 @@ def check_stream(streamName, live_room_id):
         online_info = res_json['OnlineInfo']
         if "LiveStreamOnlineInfo" in online_info:
             live_room = LiveRoom.query.get(live_room_id)
-            if len(online_info['LiveStreamOnlineInfo']) > 0 and not live_room.streaming:
+            if len(online_info['LiveStreamOnlineInfo']) > 0:
                 live_room.streaming = True
                 print('live room %d streaming: ON' % live_room_id)
-            elif len(online_info['LiveStreamOnlineInfo']) == 0 and live_room.streaming:
+            elif len(online_info['LiveStreamOnlineInfo']) == 0:
                 live_room.streaming = False
                 print('live room %d streaming: OFF' % live_room_id)
             db.session.commit()
