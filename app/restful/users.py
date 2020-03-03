@@ -2,7 +2,7 @@ from flask_restplus import Resource, reqparse, fields, marshal
 from flask import g, request
 from .. import api, db, app
 from ..model import User, Group, ProjectNotice
-from ..utility import buildUrl, getAvatar,getStageIndex,getPhaseIndex
+from ..utility import buildUrl, getAvatar, getStageIndex, getPhaseIndex
 from .utility import groupCheck, userCheck, projectNoticeCheck
 from werkzeug.security import generate_password_hash
 from .decorator import permission_required, admin_required
@@ -95,21 +95,18 @@ p_user.add_argument('phone', location='args', default='',
                     help="The phone number for the user.")
 
 u_user = reqparse.RequestParser()
-u_user.add_argument('use_id', location='args', action='split', required=True,
-                       help="Limit result set to users matching at least one specific \
-                    role provided. Accepts list or single role.")
-u_user.add_argument('name', location='args',
+u_user.add_argument('name',
                     help="Display name for the user.")
-u_user.add_argument('email', location='args',
+u_user.add_argument('email',
                     help="The email address for the user.")
-u_user.add_argument('phone', location='args',
+u_user.add_argument('phone',
                     help="The phone number for the user.")
-u_user.add_argument('title', location='args',
+u_user.add_argument('title',
                     help="The title for the user.")
 
 d_user = reqparse.RequestParser()
 d_user.add_argument('user_id', location='args', action='split', required=True,
-                       help="Limit result set to users matching at least one specific \
+                    help="Limit result set to users matching at least one specific \
                     role provided. Accepts list or single role.")
 
 
@@ -147,7 +144,8 @@ class UsersApi(Resource):
                 query = query.order_by(User.reg_date.desc())
 
         total = len(query.all())
-        users = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
+        users = query.limit(args['pre_page']).offset(
+            (args['page']-1)*args['pre_page']).all()
 
         output = {
             'users': users,
@@ -174,39 +172,14 @@ class UsersApi(Resource):
             new_user = User.create_user(
                 login=args['login'],
                 password=args['password'],
-                email = args['email'],
-                phone = args['phone']
+                email=args['email'],
+                phone=args['phone']
             )
         except Exception as e:
             print(e)
             api.abort(400, "Failed of creating user.")
 
         return new_user, 201
-        
-    @api.marshal_with(M_USER, envelope='users')
-    @api.expect(u_user)
-    def put(self):
-        args = u_user.parse_args()
-        users = User.query.filter(
-            User.id.in_(args['user_id'])).all()
-        if users:
-            for user in users:
-                try:
-                    if args['name']:
-                        user.name = args['name']
-                    if args['email']:
-                        user.email = args['email']
-                    if args['phone']:
-                        user.phone = args['phone']
-                    if args['title']:
-                        user.title = args['title']
-                    db.session.commit()
-                except Exception as e:
-                    print(e)
-                    api.abort(400, e)
-            return users, 200
-        else:
-            api.abort(400, "login name already exist")
 
     def delete(self):
         args = d_user.parse_args()
@@ -222,11 +195,34 @@ class UsersApi(Resource):
         else:
             api.abort(400, "user doesn't exist")
 
+
 @N_USER.route('/<int:user_id>')
 class UserApi(Resource):
     @api.marshal_with(M_USER)
     def get(self, user_id):
         user = userCheck(user_id)
+        return user, 200
+
+    @api.marshal_with(M_USER)
+    @api.expect(u_user)
+    def put(self, user_id):
+        args = u_user.parse_args()
+        user = userCheck(user_id)
+
+        try:
+            if args['name']:
+                user.name = args['name']
+            if args['email']:
+                user.email = args['email']
+            if args['phone']:
+                user.phone = args['phone']
+            if args['title']:
+                user.title = args['title']
+            db.session.commit()
+        except Exception as e:
+            print(e)
+            api.abort(400, e)
+
         return user, 200
 
     @admin_required
@@ -238,6 +234,7 @@ class UserApi(Resource):
         except Exception as e:
             print(e)
             api.abort(400, "delete fail!")
+
 
 M_MIN_PROJECT = api.model('project', {
     'id': fields.Integer(),
@@ -281,6 +278,8 @@ G_PROJECT_NOTICES = reqparse.RequestParser()\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=10)\
 
+
+
 @N_USER.route('/<int:user_id>/project_notices')
 class UserProjectNoticesApi(Resource):
     def get(self, user_id):
@@ -293,18 +292,20 @@ class UserProjectNoticesApi(Resource):
         if(args['only_unread']):
             query = query.filter_by(read=False)
 
-        notices = query.order_by(ProjectNotice.id.desc()).limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
+        notices = query.order_by(ProjectNotice.id.desc()).limit(
+            args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
 
         output = {
             'project_notices': notices,
             'total': len(total),
-            'unread':len(unread)
+            'unread': len(unread)
         }
         return marshal(output, M_PROJECT_NOTICES, skip_none=True), 200
-    
+
     def put(self, user_id):
         user = userCheck(user_id)
-        query = ProjectNotice.query.filter_by(to_user_id=user_id).filter_by(read=False)
+        query = ProjectNotice.query.filter_by(
+            to_user_id=user_id).filter_by(read=False)
 
         notices = query.all()
         for notice in query.all():
@@ -312,14 +313,19 @@ class UserProjectNoticesApi(Resource):
 
         return {'message': 'ok'}, 200
 
-N_PROJECT_NOTICE = api.namespace('api/project_notices', description='Notice Operations')
+
+N_PROJECT_NOTICE = api.namespace(
+    'api/project_notices', description='Notice Operations')
+
+
 @N_PROJECT_NOTICE.route('/<int:notice_id>')
-class ProjectNotiecApi(Resource): 
+class ProjectNotiecApi(Resource):
     def put(self, notice_id):
         notice = projectNoticeCheck(notice_id)
         notice.set_read()
 
         return {'message': 'ok'}, 200
+
 
 N_GROUP = api.namespace('api/groups', description='Group Operations')
 
@@ -331,8 +337,8 @@ M_GROUPS = api.model('groups', {
 G_GROUP = reqparse.RequestParser()\
     .add_argument('include', location='args', action='split')\
     .add_argument('exclude', location='args', action='split')\
-    .add_argument('order', location='args', default='asc',choices=['asc', 'desc'])\
-    .add_argument('order_by', location='args', default='id',choices=['id', 'name', 'reg_date'])\
+    .add_argument('order', location='args', default='asc', choices=['asc', 'desc'])\
+    .add_argument('order_by', location='args', default='id', choices=['id', 'name', 'reg_date'])\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=20)
 
@@ -341,6 +347,7 @@ P_GROUP = reqparse.RequestParser()\
     .add_argument('description')\
     .add_argument('admin_id', action='append')\
     .add_argument('user_id', action='append')
+
 
 @N_GROUP.route('')
 class GroupsApi(Resource):
@@ -374,11 +381,12 @@ class GroupsApi(Resource):
                 query = query.order_by(Group.reg_date.desc())
 
         total = len(query.all())
-        groups = query.limit(args['pre_page']).offset((args['page']-1)*args['pre_page']).all()
-        
+        groups = query.limit(args['pre_page']).offset(
+            (args['page']-1)*args['pre_page']).all()
+
         output = {
-            'groups':groups,
-            'total':total
+            'groups': groups,
+            'total': total
         }
         return marshal(output, M_GROUPS), 200
 
@@ -430,6 +438,7 @@ class GroupAddUserApi(Resource):
         db.session.commit()
         return group, 200
 
+
 @N_GROUP.route('/<int:group_id>/remove/<int:user_id>')
 class GroupRemoveUserApi(Resource):
     @api.marshal_with(M_GROUP)
@@ -452,6 +461,7 @@ class GroupRemoveUserApi(Resource):
 
         db.session.commit()
         return group, 200
+
 
 @N_GROUP.route('/<int:group_id>')
 class GroupRemoveApi(Resource):
