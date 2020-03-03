@@ -2,7 +2,7 @@ from flask import Flask, json
 from flask_restplus import Api
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from flask_socketio import SocketIO, send
+# from flask_socketio import SocketIO, send
 from celery import Celery
 from flask_migrate import Migrate, init as db_init, migrate as db_migrate, upgrade as db_upgrade
 from config import config
