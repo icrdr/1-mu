@@ -363,8 +363,8 @@ class Project(db.Model):
 
         db.session.commit()
 
-        if self.pause:
-            self.doResume(operator_id, logging=False)
+        # if self.pause:
+        #     self.doResume(operator_id, logging=False)
 
     def doPause(self, operator_id, logging=True):
         """Pause this project."""

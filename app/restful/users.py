@@ -469,4 +469,4 @@ class GroupRemoveApi(Resource):
     def delete(self, group_id):
         group = groupCheck(group_id)
         group.delete()
-        return {'message': 'ok'}, 204
+        return {'message': 'ok'}, 201

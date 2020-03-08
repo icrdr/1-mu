@@ -170,6 +170,9 @@ POST_PROJECT = reqparse.RequestParser()\
     .add_argument('tags', action='append')\
     .add_argument('files', type=int, action='append')
 
+
+
+
 @N_PROJECT.route('')
 class PorjectsApi(Resource):
     @api.expect(GET_PROJECT)
@@ -186,7 +189,8 @@ class PorjectsApi(Resource):
                 Project.creator_user_id.in_(args['creator_id']))
 
         if args['participant_id']:
-            query = query.filter(or_(Project.phases.any(Phase.creator_user_id==args['participant_id']), Project.creator_user_id==args['participant_id']))
+            query = query.filter(or_(Project.phases.any(
+                Phase.creator_user_id == args['participant_id']), Project.creator_user_id == args['participant_id']))
 
         if args['client_id']:
             query = query.filter(Project.client_user_id.in_(args['client_id']))
@@ -196,13 +200,15 @@ class PorjectsApi(Resource):
 
         if args['status']:
             if 'pause' in args['status']:
+                if len(args['status']) == 1 or (len(args['status']) == 2 and 'delay' in args['status']):
+                    args['status'] += ['progress', 'modify', 'pending']
                 query = query.filter(Project.pause == True)
-            else:
-                query = query.filter(Project.pause == False)
+
             if 'delay' in args['status']:
+                if len(args['status']) == 1 or (len(args['status']) == 2 and 'pause' in args['status']):
+                    args['status'] += ['progress', 'modify', 'pending']
                 query = query.filter(Project.delay == True)
-            else:
-                query = query.filter(Project.delay == False)
+
             query = query.filter(Project.status.in_(args['status']))
 
         if args['start_date']:
@@ -412,7 +418,7 @@ class PorjectApi(Resource):
     def delete(self, project_id):
         project = projectCheck(project_id)
         project.doDelete()
-        return {'message': 'ok'}, 204
+        return {'message': 'ok'}, 201
 
 
 @N_PROJECT.route('/<int:project_id>/start')
@@ -578,6 +584,90 @@ class PorjectChangeDDLApi(Resource):
             print('[Sever Error]: %s' % error)
             api.abort(500, '[Sever Error]: %s' % error)
 
+BATCH_HANDLE_PROJECT = reqparse.RequestParser()\
+    .add_argument('project_id', type=int, required=True, action='split')\
+
+@N_PROJECT.route('/discard')
+class PorjectDisCardApi(Resource):
+    @api.expect(BATCH_HANDLE_PROJECT)
+    @permission_required()
+    def put(self):
+        args = BATCH_HANDLE_PROJECT.parse_args()
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            api.abort(
+                403, "Administrator privileges required for request update action.")
+        for project_id in args['project_id']:
+            project = Project.query.get(project_id)
+            try:
+                project.doDiscard(g.current_user.id)
+            except Exception as error:
+                print('[Sever Error]: %s' % error)
+                api.abort(500, '[Sever Error]: %s' % error)
+        return {'message': 'ok'}, 201
+
+@N_PROJECT.route('/recover')
+class PorjectDisCardApi(Resource):
+    @api.expect(BATCH_HANDLE_PROJECT)
+    @permission_required()
+    def put(self):
+        args = BATCH_HANDLE_PROJECT.parse_args()
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            api.abort(
+                403, "Administrator privileges required for request update action.")
+        for project_id in args['project_id']:
+            project = Project.query.get(project_id)
+            try:
+                project.doRecover(g.current_user.id)
+            except Exception as error:
+                print('[Sever Error]: %s' % error)
+                api.abort(500, '[Sever Error]: %s' % error)
+        return {'message': 'ok'}, 201
+
+@N_PROJECT.route('/resume')
+class PorjectDisCardApi(Resource):
+    @api.expect(BATCH_HANDLE_PROJECT)
+    @permission_required()
+    def put(self):
+        args = BATCH_HANDLE_PROJECT.parse_args()
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            api.abort(
+                403, "Administrator privileges required for request update action.")
+        for project_id in args['project_id']:
+            project = Project.query.get(project_id)
+            if project.discard:
+                api.abort(401, "Project is discard.")
+            if project.progress <= 0:
+                api.abort(401, "Project is not in progress.")
+            try:
+                project.doResume(g.current_user.id)
+            except Exception as error:
+                print('[Sever Error]: %s' % error)
+                api.abort(500, '[Sever Error]: %s' % error)
+        return {'message': 'ok'}, 201
+
+@N_PROJECT.route('/pause')
+class PorjectDisCardApi(Resource):
+    @api.expect(BATCH_HANDLE_PROJECT)
+    @permission_required()
+    def put(self):
+        args = BATCH_HANDLE_PROJECT.parse_args()
+        if not g.current_user.can(PERMISSIONS['EDIT']):
+            api.abort(
+                403, "Administrator privileges required for request update action.")
+        for project_id in args['project_id']:
+            project = Project.query.get(project_id)
+
+            if project.discard:
+                api.abort(401, "Project is discard.")
+            if project.progress <= 0:
+                api.abort(401, "Project is not in progress.")
+
+            try:
+                project.doPause(g.current_user.id)
+            except Exception as error:
+                print('[Sever Error]: %s' % error)
+                api.abort(500, '[Sever Error]: %s' % error)
+        return {'message': 'ok'}, 201
 
 @N_PROJECT.route('/<int:project_id>/discard')
 class PorjectDiscardApi(Resource):
