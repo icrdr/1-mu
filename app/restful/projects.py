@@ -158,7 +158,7 @@ GET_PROJECT = reqparse.RequestParser()\
     .add_argument('exclude', location='args', action='split')\
     .add_argument('page', location='args', type=int, default=1)\
     .add_argument('pre_page', location='args', type=int, default=10)\
-    .add_argument('order', location='args', default='asc', choices=['asc', 'desc'])\
+    .add_argument('order', location='args', default='desc', choices=['asc', 'desc'])\
     .add_argument('order_by', location='args', default='id', choices=['id', 'title', 'start_date', 'finish_date', 'deadline_date', 'status', 'creator_id', 'client_id', 'progress'])
 
 POST_PROJECT = reqparse.RequestParser()\
