@@ -42,6 +42,57 @@ PHASE_UPLOAD_FILE = db.Table(
               db.ForeignKey('phases.id')),
 )
 
+# NOTICE_FILE = db.Table(
+#     'notice_files',
+#     db.Column('file_id', db.Integer,
+#               db.ForeignKey('files.id')),
+#     db.Column('notice_id', db.Integer,
+#               db.ForeignKey('notices.id')),
+# )
+
+class Notice(db.Model):
+    """Notice Model"""
+    __tablename__ = 'notices'
+    # meta data
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(256))
+    content = db.Column(db.Text)
+    # files = db.relationship('File', secondary=NOTICE_FILE,
+    #                         lazy='subquery', backref=db.backref('projects', lazy=True))
+
+    # user data
+    poster_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    poster = db.relationship('User', foreign_keys=poster_user_id, backref=db.backref(
+        'notices_as_poster', lazy=True))
+
+    expired = db.Column(db.Boolean, nullable=False, default=False)
+    # timestamp
+    post_date = db.Column(db.DateTime, default=datetime.utcnow)
+    expire_date = db.Column(db.DateTime)
+
+    @staticmethod
+    def create_notice(operator_id, title, poster_id, content, files):
+        """Create new notice."""
+        # create project
+        new_notice = Notice(
+            title=title,
+            client_user_id=poster_id,
+            content=content
+        )
+        db.session.add(new_notice)
+
+        if files:
+            for file in files:
+                _file = File.query.get(file)
+                if _file:
+                    new_notice.files.append(_file)
+
+        db.session.commit()
+        return new_notice
+
+    def __repr__(self):
+        return '<Notice id %s %s>' % (self.id, self.title)
+
 
 class Project(db.Model):
     """Project Model"""
@@ -190,7 +241,7 @@ class Project(db.Model):
         db.session.add(new_log)
 
         db.session.commit()
-        editors = User.query.filter(User.role_id==2).all()
+        editors = User.query.filter(User.role_id == 2).all()
         for editor in editors:
             if self.client_user_id != editor.id:
                 send_message(new_log, editor)
@@ -220,7 +271,7 @@ class Project(db.Model):
         current_phase.client_feedback = feedback_content
         current_phase.client_user_id = client_id
         current_phase.feedback_date = datetime.utcnow()
-        
+
         if files:
             print(files)
             current_phase.files = []
