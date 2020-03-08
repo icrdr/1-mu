@@ -171,8 +171,6 @@ POST_PROJECT = reqparse.RequestParser()\
     .add_argument('files', type=int, action='append')
 
 
-
-
 @N_PROJECT.route('')
 class PorjectsApi(Resource):
     @api.expect(GET_PROJECT)
@@ -584,8 +582,11 @@ class PorjectChangeDDLApi(Resource):
             print('[Sever Error]: %s' % error)
             api.abort(500, '[Sever Error]: %s' % error)
 
+
 BATCH_HANDLE_PROJECT = reqparse.RequestParser()\
     .add_argument('project_id', type=int, required=True, action='split')\
+
+
 
 @N_PROJECT.route('/discard')
 class PorjectDisCardApi(Resource):
@@ -605,6 +606,7 @@ class PorjectDisCardApi(Resource):
                 api.abort(500, '[Sever Error]: %s' % error)
         return {'message': 'ok'}, 201
 
+
 @N_PROJECT.route('/recover')
 class PorjectDisCardApi(Resource):
     @api.expect(BATCH_HANDLE_PROJECT)
@@ -622,6 +624,7 @@ class PorjectDisCardApi(Resource):
                 print('[Sever Error]: %s' % error)
                 api.abort(500, '[Sever Error]: %s' % error)
         return {'message': 'ok'}, 201
+
 
 @N_PROJECT.route('/resume')
 class PorjectDisCardApi(Resource):
@@ -644,6 +647,7 @@ class PorjectDisCardApi(Resource):
                 print('[Sever Error]: %s' % error)
                 api.abort(500, '[Sever Error]: %s' % error)
         return {'message': 'ok'}, 201
+
 
 @N_PROJECT.route('/pause')
 class PorjectDisCardApi(Resource):
@@ -668,6 +672,7 @@ class PorjectDisCardApi(Resource):
                 print('[Sever Error]: %s' % error)
                 api.abort(500, '[Sever Error]: %s' % error)
         return {'message': 'ok'}, 201
+
 
 @N_PROJECT.route('/<int:project_id>/discard')
 class PorjectDiscardApi(Resource):

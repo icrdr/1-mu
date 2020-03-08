@@ -62,6 +62,7 @@ def init():
     model.Option.init_option()
     db_init()
 
+
 @app.cli.command()
 def doc():
     with app.app_context(), app.test_request_context():
@@ -71,3 +72,20 @@ def doc():
         with open("api.json", 'w') as file:  # Use file to refer to the file object
             print(json.dumps(data))
             file.write(json.dumps(data))
+
+
+@app.cli.command()
+def tags():
+    projects = model.Project.query.join(model.Project.tags).filter(
+        model.Tag.name.in_(['腾讯军医词条', '腾讯医典词条'])).all()
+    Tag1 = model.Tag.query.filter(model.Tag.name == '腾讯军医词条').first()
+    Tag2 = model.Tag.query.filter(model.Tag.name == '腾讯医典词条').first()
+    Tag3 = model.Tag.query.filter(model.Tag.name == '腾讯综述').first()
+    for project in projects:
+        print(project.id)
+        project.tags.append(Tag3)
+        if Tag1 in project.tags:
+            project.tags.remove(Tag1)
+        if Tag2 in project.tags:
+            project.tags.remove(Tag2)
+        db.session.commit()
