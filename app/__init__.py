@@ -11,7 +11,7 @@ import redis
 from pytz import utc
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import timedelta, datetime
-
+from pathlib import Path
 
 app = Flask(__name__)
 app.config.from_object(config[os.environ.get('FLASK_ENV')])
@@ -73,6 +73,19 @@ def doc():
             print(json.dumps(data))
             file.write(json.dumps(data))
 
+@app.cli.command()
+def psds():
+    psds = model.File.query.filter(model.File.format == 'psd').all()
+    for psd in psds:
+        if len(psd.previews) > 0:
+            print(psd.id)
+            psd.url = psd.previews[0].url
+            psd.format = 'jpg'
+            db.session.commit()
+
+            path = app.config['UPLOAD_FOLDER'] / Path(psd.url)
+            if path.exists():
+                path.unlink()
 
 # @app.cli.command()
 # def tags():
