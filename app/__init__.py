@@ -88,11 +88,13 @@ def psds():
                 need_delete = False
             if need_delete:
                 print(file.id)
-                print(file.url)
                 path = app.config['UPLOAD_FOLDER'] / Path(file.url)
                 if path.exists():
                     print('ok')
                     path.unlink()
+                    file.url = file.previews[0].url
+                    file.format = 'jpg'
+                    db.session.commit()
                 break
             # psd.url = psd.previews[0].url
             # psd.format = 'jpg'
