@@ -76,7 +76,7 @@ def doc():
 @app.cli.command()
 def psds():
     files = model.File.query.filter(model.File.format.in_(['psd','tif'])).all()
-    end = datetime(2021, 1, 1)
+    end = datetime(2020, 1, 1)
     for file in files:
         if len(file.previews) > 0 and file.phases_as_upload:
             need_delete = True
@@ -95,7 +95,6 @@ def psds():
                     file.url = file.previews[0].url
                     file.format = 'jpg'
                     db.session.commit()
-                break
             # psd.url = psd.previews[0].url
             # psd.format = 'jpg'
             # db.session.commit()
