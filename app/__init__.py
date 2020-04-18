@@ -75,17 +75,32 @@ def doc():
 
 @app.cli.command()
 def psds():
-    psds = model.File.query.filter(model.File.format == 'psd').all()
-    for psd in psds:
-        if len(psd.previews) > 0:
-            print(psd.id)
-            psd.url = psd.previews[0].url
-            psd.format = 'jpg'
-            db.session.commit()
+    files = model.File.query.filter(model.File.format.in_(['psd','tif'])).all()
+    end = datetime(2021, 1, 1)
+    for file in files:
+        if len(file.previews) > 0 and file.phases_as_upload:
+            need_delete = True
+            tags = file.phases_as_upload[0].project.tags
+            for tag in tags:
+                if tag.name == '样图':
+                    need_delete = False 
+            if file.upload_date > end:
+                need_delete = False
+            if need_delete:
+                print(file.id)
+                print(file.url)
+                path = app.config['UPLOAD_FOLDER'] / Path(file.url)
+                if path.exists():
+                    print('ok')
+                    path.unlink()
+                break
+            # psd.url = psd.previews[0].url
+            # psd.format = 'jpg'
+            # db.session.commit()
 
-            path = app.config['UPLOAD_FOLDER'] / Path(psd.url)
-            if path.exists():
-                path.unlink()
+            # path = app.config['UPLOAD_FOLDER'] / Path(psd.url)
+            # if path.exists():
+            #     path.unlink()
 
 # @app.cli.command()
 # def tags():
