@@ -50,7 +50,7 @@ class DownloadApi(Resource):
                 zip_file_name = '{}-{}-{}.zip'.format(project.title, stage.name, str(shortuuid.uuid()))
                 zip_file = os.path.join(zip_path, zip_file_name)
                 zipf = zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED)
-                
+
                 for i, file in enumerate(files_list):
                     index_number = '{:03}'.format(i)
                     filename = '{}-{}.{}.{}'.format(
@@ -513,8 +513,10 @@ def downloadZipTask(self, project_id, mode):
                         else:
                             im = Image.open(im_path)
                         im = im.convert('RGB')
-                        filename = '{}.{}.{}'.format(
-                            project.title, index_number, 'jpg')
+                        # filename = '{}.{}.{}'.format(
+                        #     project.title, index_number, 'jpg')
+                        filename = '{}.{}'.format(
+                            upload_file.name, 'jpg')
                         im.save(os.path.join(zip_path, filename), "JPEG")
                         zipf.write(
                             os.path.join(zip_path, filename),
@@ -523,8 +525,10 @@ def downloadZipTask(self, project_id, mode):
                     except Exception as e:
                         print(e)
                 else:
-                    filename = '{}.{}.{}'.format(
-                        project.title, index_number, upload_file.format)
+                    # filename = '{}.{}.{}'.format(
+                    #     project.title, index_number, upload_file.format)
+                    filename = '{}.{}'.format(
+                        upload_file.name, upload_file.format)
                     zipf.write(
                         os.path.join(
                             app.config['UPLOAD_FOLDER'], upload_file.url),
