@@ -220,12 +220,12 @@ class WxMenuApi(Resource):
                         {
                             "type": "view_limited",
                             "name": "医学3D制图培训",
-                            "media_id": "F8EWugFQrW6deUZOeUy9argUQ1ODljp54YoQzcPbGBs"
+                            "media_id": "F8EWugFQrW6deUZOeUy9aizVv0myMf_ZThzD5cE7haY"
                         },
                         {
                             "type": "view_limited",
                             "name": "生物科研插图实验班·2",
-                            "media_id": "F8EWugFQrW6deUZOeUy9argUQ1ODljp54YoQzcPbGBs"
+                            "media_id": "F8EWugFQrW6deUZOeUy9aizVv0myMf_ZThzD5cE7haY"
                         }
                     ]
                 },
