@@ -120,7 +120,7 @@ class WxAuthApi(Resource):
             "code": args['wxcode']
         }
 
-        try:  
+        try:
             # step 2: get access_token from wechat serves.
             data = requests.get(url, params=params).json()
             if 'access_token' in data:
@@ -129,7 +129,7 @@ class WxAuthApi(Resource):
                     "access_token": data['access_token'],
                     "openid": data['openid'],
                 }
-                try:  
+                try:
                     # step 3: get userinfo with access_token from wechat serves.
                     res = requests.get(url, params=params)
                     res.encoding = 'utf-8'
@@ -165,6 +165,8 @@ class WxTokenApi(Resource):
 
 g_check = reqparse.RequestParser()
 g_check.add_argument('scene_str', required=True, location='args')
+
+
 @n_wechat.route('/check')
 class WxLoginApi(Resource):
     def get(self):
@@ -212,18 +214,18 @@ class WxMenuApi(Resource):
                     "sub_button": [
                         {
                             "type": "view_limited",
-                            "name": "医学数字插画",
+                            "name": "医学插画培训",
                             "media_id": "F8EWugFQrW6deUZOeUy9arpbtH8fQOqmBE4q_DHF3rc"
                         },
                         {
                             "type": "view_limited",
-                            "name": "3D培训",
-                            "media_id": "F8EWugFQrW6deUZOeUy9atscsZY9vpmVyQD838Ir9FY"
+                            "name": "医学3D制图培训",
+                            "media_id": "F8EWugFQrW6deUZOeUy9argUQ1ODljp54YoQzcPbGBs"
                         },
                         {
                             "type": "view_limited",
-                            "name": "PPT培训",
-                            "media_id": "F8EWugFQrW6deUZOeUy9anBxSlYBXC7Y0QbD466YAPY"
+                            "name": "生物科研插图实验班·2",
+                            "media_id": "F8EWugFQrW6deUZOeUy9aizVv0myMf_ZThzD5cE7haY"
                         }
                     ]
                 },
@@ -313,6 +315,7 @@ def getAccessToken():
         print(e)
         return api.abort(400, "bad connection")
 
+
 def accessUser(data):
     wx_user = WxUser.query.filter_by(unionid=data['unionid']).first()
     # check if the wechat unionid is already registed on our serves
@@ -346,4 +349,3 @@ def accessUser(data):
         'token': token.decode('UTF-8'),
         'wx_info': data
     }, 200
-    
