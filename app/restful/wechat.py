@@ -214,13 +214,8 @@ class WxMenuApi(Resource):
                     "sub_button": [
                         {
                             "type": "view_limited",
-                            "name": "医学插画培训",
-                            "media_id": "F8EWugFQrW6deUZOeUy9arpbtH8fQOqmBE4q_DHF3rc"
-                        },
-                        {
-                            "type": "view_limited",
-                            "name": "医学3D制图培训",
-                            "media_id": "F8EWugFQrW6deUZOeUy9aizVv0myMf_ZThzD5cE7haY"
+                            "name": "医学插画培训·7",
+                            "media_id": "F8EWugFQrW6deUZOeUy9akTALlOekbz2_DtetsgzJHU"
                         },
                         {
                             "type": "view_limited",
